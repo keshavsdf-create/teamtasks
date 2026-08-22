@@ -71,25 +71,25 @@ async function handleLogin(e) {
   const username = document.getElementById('username').value;
   const password = document.getElementById('password').value;
 
-  try {
-    const response = await fetch(`${API_URL}/login`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username, password })
-    });
+  // Hardcoded demo credentials
+  const validUsers = {
+    'manager': { password: 'password123', role: 'manager', name: 'Manager Admin', id: 1 },
+    'john': { password: 'password123', role: 'employee', name: 'John', id: 2 },
+    'sarah': { password: 'password123', role: 'employee', name: 'Sarah', id: 3 },
+    'alex': { password: 'password123', role: 'employee', name: 'Alex', id: 4 }
+  };
 
-    const data = await response.json();
-
-    if (data.success) {
-      currentUser = data.user;
-      localStorage.setItem('user', JSON.stringify(currentUser));
-      showDashboard();
-    } else {
-      alert('Invalid credentials');
-    }
-  } catch (error) {
-    console.error('Login error:', error);
-    alert('Login failed');
+  if (validUsers[username] && validUsers[username].password === password) {
+    currentUser = {
+      id: validUsers[username].id,
+      username: username,
+      role: validUsers[username].role,
+      name: validUsers[username].name
+    };
+    localStorage.setItem('user', JSON.stringify(currentUser));
+    showDashboard();
+  } else {
+    alert('Invalid credentials');
   }
 }
 
@@ -147,13 +147,36 @@ async function loadUsers() {
 }
 
 async function loadTasks() {
-  try {
-    const response = await fetch(`${API_URL}/tasks`);
-    allTasks = await response.json();
-    renderTasks();
-  } catch (error) {
-    console.error('Error loading tasks:', error);
-  }
+  // Mock tasks data
+  allTasks = [
+    {
+      id: 1,
+      name: 'Design Dashboard',
+      description: 'Create UI mockups for dashboard',
+      assignedTo: [2],
+      taggedFor: [3],
+      deadline: '2026-08-28',
+      urgency: 'high',
+      status: 'in-progress',
+      createdBy: 1,
+      attachments: [],
+      createdAt: new Date()
+    },
+    {
+      id: 2,
+      name: 'Setup Database',
+      description: 'Configure database',
+      assignedTo: [4],
+      taggedFor: [],
+      deadline: '2026-08-25',
+      urgency: 'high',
+      status: 'todo',
+      createdBy: 1,
+      attachments: [],
+      createdAt: new Date()
+    }
+  ];
+  renderTasks();
 }
 
 function renderTasks() {
