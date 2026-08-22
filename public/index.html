@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TeamTasks - Task Management</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
+</head>
+<body>
+  <div id="app"></div>
+  
+  <!-- Login Screen -->
+  <div id="loginContainer" class="login-container">
+    <div class="login-box">
+      <h1>TeamTasks</h1>
+      <p class="subtitle">Task Management for Teams</p>
+      <form id="loginForm">
+        <input type="text" id="username" placeholder="Username" required>
+        <input type="password" id="password" placeholder="Password" required>
+        <button type="submit">Login</button>
+        <p class="demo-info">Demo: username=manager, password=password123</p>
+      </form>
+    </div>
+  </div>
+
+  <!-- Dashboard Screen -->
+  <div id="dashboardContainer" style="display: none;">
+    <!-- Header -->
+    <header class="header">
+      <div class="header-left">
+        <h1>TeamTasks Dashboard</h1>
+        <p id="userGreeting"></p>
+      </div>
+      <div class="header-right">
+        <button id="addTaskBtn" class="btn-primary" style="display: none;">+ New Task</button>
+        <button id="addUserBtn" class="btn-secondary" style="display: none;">+ Add Employee</button>
+        <button id="logoutBtn" class="btn-logout">Logout</button>
+      </div>
+    </header>
+
+    <!-- Kanban Board -->
+    <div class="board-container">
+      <div class="column" data-status="todo">
+        <div class="column-header">📝 To Do</div>
+        <div class="column-content" id="todo"></div>
+      </div>
+
+      <div class="column" data-status="in-progress">
+        <div class="column-header">⚙️ In Progress</div>
+        <div class="column-content" id="in-progress"></div>
+      </div>
+
+      <div class="column" data-status="done">
+        <div class="column-header">✅ Done</div>
+        <div class="column-content" id="done"></div>
+      </div>
+
+      <div class="column" data-status="need-help">
+        <div class="column-header">🆘 Need Help</div>
+        <div class="column-content" id="need-help"></div>
+      </div>
+
+      <div class="column" data-status="hold">
+        <div class="column-header">⏸️ Hold</div>
+        <div class="column-content" id="hold"></div>
+      </div>
+
+      <div class="column" data-status="future">
+        <div class="column-header">🔮 Future</div>
+        <div class="column-content" id="future"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Task Modal -->
+  <div id="taskModal" class="modal-overlay">
+    <div class="modal">
+      <div class="modal-header">
+        <h2 id="modalTitle">Task Details</h2>
+        <button class="modal-close">&times;</button>
+      </div>
+
+      <div class="modal-content">
+        <div class="modal-section">
+          <label>Task Name</label>
+          <input type="text" id="taskName" class="modal-input" placeholder="Enter task name">
+        </div>
+
+        <div class="modal-section">
+          <label>Description</label>
+          <textarea id="taskDescription" class="modal-textarea" placeholder="Add task details..."></textarea>
+        </div>
+
+        <div class="two-col">
+          <div class="modal-section">
+            <label>Deadline</label>
+            <input type="date" id="taskDeadline" class="modal-input">
+          </div>
+          <div class="modal-section">
+            <label>Urgency</label>
+            <select id="taskUrgency" class="modal-select">
+              <option value="low">🟢 Low</option>
+              <option value="medium">🟡 Medium</option>
+              <option value="high">🔴 High</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="modal-section">
+          <label>Status</label>
+          <select id="taskStatus" class="modal-select">
+            <option value="todo">To Do</option>
+            <option value="in-progress">In Progress</option>
+            <option value="done">Done</option>
+            <option value="need-help">Need Help</option>
+            <option value="hold">Hold</option>
+            <option value="future">Future</option>
+          </select>
+        </div>
+
+        <div class="modal-section">
+          <label>Tag for Help</label>
+          <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+            <input type="text" id="tagInput" class="modal-input" placeholder="Type name and press Enter" style="flex: 1;">
+            <select id="userSelect" class="modal-select" style="flex: 1;"></select>
+          </div>
+          <div id="taggedUsers" class="tags-container"></div>
+        </div>
+
+        <div class="modal-section">
+          <label>📸 Photo</label>
+          <div class="upload-area" id="photoUpload">
+            <div class="upload-icon">📷</div>
+            <div class="upload-text">Click to upload photo</div>
+            <input type="file" class="file-input" id="photoInput" accept="image/*">
+          </div>
+          <div id="photoList" class="uploaded-items"></div>
+        </div>
+
+        <div class="modal-section">
+          <label>📎 Attachments</label>
+          <div class="upload-area" id="docUpload">
+            <div class="upload-icon">📄</div>
+            <div class="upload-text">Click to upload documents</div>
+            <input type="file" class="file-input" id="docInput" multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.txt">
+          </div>
+          <div id="docList" class="uploaded-items"></div>
+        </div>
+
+        <div class="modal-section">
+          <label>Created By</label>
+          <input type="text" id="taskCreatedBy" class="modal-input" disabled>
+        </div>
+      </div>
+
+      <div class="modal-buttons">
+        <button id="saveTaskBtn" class="btn-primary">Save Task</button>
+        <button id="cancelTaskBtn" class="btn-secondary">Cancel</button>
+        <button id="deleteTaskBtn" class="btn-danger" style="display: none;">Delete Task</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add User Modal -->
+  <div id="userModal" class="modal-overlay">
+    <div class="modal">
+      <div class="modal-header">
+        <h2>Add New Employee</h2>
+        <button class="modal-close">&times;</button>
+      </div>
+
+      <div class="modal-content">
+        <div class="modal-section">
+          <label>Employee Name</label>
+          <input type="text" id="newUserName" class="modal-input" placeholder="Full name">
+        </div>
+
+        <div class="modal-section">
+          <label>Username</label>
+          <input type="text" id="newUsername" class="modal-input" placeholder="Username">
+        </div>
+
+        <div class="modal-section">
+          <label>Role</label>
+          <select id="newUserRole" class="modal-select">
+            <option value="employee">Employee</option>
+            <option value="manager">Manager</option>
+          </select>
+        </div>
+
+        <div id="tempPasswordDisplay" class="modal-section" style="display: none;">
+          <label>Temporary Password (Share with user)</label>
+          <input type="text" id="tempPassword" class="modal-input" disabled>
+        </div>
+      </div>
+
+      <div class="modal-buttons">
+        <button id="createUserBtn" class="btn-primary">Create Employee</button>
+        <button id="cancelUserBtn" class="btn-secondary">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
