@@ -34,7 +34,20 @@ body {
   align-items: center;
   justify-content: center;
   min-height: 100vh;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #FF6B35 0%, #FFA500 25%, #FFD700 50%, #FFA500 75%, #FF6B35 100%);
+  animation: sunrise-fade 8s ease-in-out infinite;
+}
+
+@keyframes sunrise-fade {
+  0% {
+    background: linear-gradient(135deg, #FF6B35 0%, #FFA500 25%, #FFD700 50%, #FFA500 75%, #FF6B35 100%);
+  }
+  50% {
+    background: linear-gradient(135deg, #FF8C42 0%, #FFB84D 25%, #FFED66 50%, #FFB84D 75%, #FF8C42 100%);
+  }
+  100% {
+    background: linear-gradient(135deg, #FF6B35 0%, #FFA500 25%, #FFD700 50%, #FFA500 75%, #FF6B35 100%);
+  }
 }
 
 .login-box {
