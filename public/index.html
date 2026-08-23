@@ -221,11 +221,25 @@
       margin-bottom: 24px;
     }
 
+    .header-title {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .header-logo {
+      height: 40px;
+      width: auto;
+      flex-shrink: 0;
+      object-fit: contain;
+    }
+
     .header h1 {
       font-size: 28px;
       font-weight: 800;
       color: var(--navy);
       letter-spacing: -0.5px;
+      margin: 0;
     }
 
     .header-right { display: flex; align-items: center; gap: 14px; }
@@ -954,7 +968,10 @@
   <div class="app" id="appRoot" style="display:none;">
 
     <div class="header">
-      <h1>TeamTasks</h1>
+      <div class="header-title">
+        <img src="assets/teamtalk-logo.png" alt="TeamTasks" class="header-logo">
+        <h1>TeamTasks</h1>
+      </div>
       <div class="header-right">
         <button class="btn btn-primary" id="newTaskBtn" onclick="openAddModal()">+ New Task</button>
         <div class="team-trigger-wrap">
