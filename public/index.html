@@ -13,7 +13,6 @@
       min-height: 100vh;
     }
 
-    /* ===== HEADER ===== */
     .header {
       background: linear-gradient(135deg, #FF6B35 0%, #FFA500 50%, #FFD700 100%);
       padding: 16px 24px;
@@ -26,17 +25,9 @@
       z-index: 100;
     }
 
-    .header h1 {
-      color: white;
-      font-size: 24px;
-      text-shadow: 1px 1px 3px rgba(0,0,0,0.2);
-    }
+    .header h1 { color: white; font-size: 24px; text-shadow: 1px 1px 3px rgba(0,0,0,0.2); }
 
-    .header-right {
-      display: flex;
-      align-items: center;
-      gap: 16px;
-    }
+    .header-right { display: flex; align-items: center; gap: 16px; }
 
     .user-badge {
       background: rgba(255,255,255,0.25);
@@ -57,38 +48,17 @@
       transition: all 0.2s;
     }
 
-    .btn-primary {
-      background: white;
-      color: #FF6B35;
-    }
+    .btn-primary { background: white; color: #FF6B35; }
+    .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
+    .btn-save { background: #28a745; color: white; }
+    .btn-cancel { background: #6c757d; color: white; }
+    .btn-delete { background: #dc3545; color: white; }
+    .btn-approve { background: #28a745; color: white; }
+    .btn-reject { background: #dc3545; color: white; }
+    .btn-small { padding: 6px 12px; font-size: 12px; }
+    .btn-outline { background: white; border: 1px solid #ddd; color: #555; }
 
-    .btn-primary:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-    }
-
-    .btn-save {
-      background: #28a745;
-      color: white;
-    }
-
-    .btn-cancel {
-      background: #6c757d;
-      color: white;
-    }
-
-    .btn-delete {
-      background: #dc3545;
-      color: white;
-    }
-
-    /* ===== STATS BAR ===== */
-    .stats-bar {
-      display: flex;
-      gap: 16px;
-      padding: 20px 24px;
-      flex-wrap: wrap;
-    }
+    .stats-bar { display: flex; gap: 16px; padding: 20px 24px; flex-wrap: wrap; }
 
     .stat-card {
       background: white;
@@ -100,37 +70,12 @@
       text-align: center;
     }
 
-    .stat-number {
-      font-size: 28px;
-      font-weight: bold;
-      color: #FF6B35;
-    }
+    .stat-number { font-size: 28px; font-weight: bold; color: #FF6B35; }
+    .stat-label { font-size: 12px; color: #888; margin-top: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
 
-    .stat-label {
-      font-size: 12px;
-      color: #888;
-      margin-top: 4px;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-    }
+    .board { display: flex; gap: 16px; padding: 0 24px 24px; overflow-x: auto; align-items: flex-start; }
 
-    /* ===== KANBAN BOARD ===== */
-    .board {
-      display: flex;
-      gap: 16px;
-      padding: 0 24px 24px;
-      overflow-x: auto;
-      align-items: flex-start;
-    }
-
-    .column {
-      background: #e9ecef;
-      border-radius: 12px;
-      min-width: 260px;
-      width: 260px;
-      flex-shrink: 0;
-      padding: 12px;
-    }
+    .column { background: #e9ecef; border-radius: 12px; min-width: 260px; width: 260px; flex-shrink: 0; padding: 12px; }
 
     .column-header {
       display: flex;
@@ -144,26 +89,10 @@
       color: #555;
     }
 
-    .column-count {
-      background: rgba(0,0,0,0.1);
-      border-radius: 10px;
-      padding: 2px 10px;
-      font-size: 12px;
-    }
+    .column-count { background: rgba(0,0,0,0.1); border-radius: 10px; padding: 2px 10px; font-size: 12px; }
+    .column-body { min-height: 100px; display: flex; flex-direction: column; gap: 10px; }
+    .column.drag-over { background: #d4e9ff; outline: 2px dashed #007bff; }
 
-    .column-body {
-      min-height: 100px;
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-    }
-
-    .column.drag-over {
-      background: #d4e9ff;
-      outline: 2px dashed #007bff;
-    }
-
-    /* ===== TASK CARDS ===== */
     .task-card {
       background: white;
       border-radius: 10px;
@@ -174,54 +103,43 @@
       transition: transform 0.15s, box-shadow 0.15s;
     }
 
-    .task-card:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 6px 16px rgba(0,0,0,0.15);
-    }
-
-    .task-card.dragging {
-      opacity: 0.5;
-    }
-
-    .card-urgency {
-      height: 6px;
-    }
+    .task-card:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(0,0,0,0.15); }
+    .task-card.dragging { opacity: 0.5; }
+    .card-urgency { height: 6px; }
 
     .urgency-high .card-urgency { background: #e57373; }
     .urgency-medium .card-urgency { background: #ffb74d; }
     .urgency-low .card-urgency { background: #81c784; }
 
-    .card-content {
-      padding: 12px;
-    }
+    .approval-pending .card-urgency { background: #FFD600; }
+    .approval-approved .card-urgency { background: #69F0AE; }
+    .approval-rejected .card-urgency { background: #FF5252; }
 
-    .card-title {
-      font-weight: 600;
-      font-size: 14px;
-      color: #333;
-      margin-bottom: 8px;
-    }
+    .approval-pending { background: #FFFDE7; }
+    .approval-approved { background: #E8F9EF; }
+    .approval-rejected { background: #FDECEA; }
 
-    .card-meta {
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-      font-size: 12px;
-      color: #777;
-    }
-
-    .card-deadline.overdue {
-      color: #dc3545;
-      font-weight: 600;
-    }
-
-    .card-creator {
-      font-size: 11px;
-      color: #aaa;
+    .approval-badge {
+      display: inline-block;
+      font-size: 10px;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 10px;
       margin-top: 6px;
+      text-transform: uppercase;
     }
 
-    /* ===== MODAL ===== */
+    .approval-badge.pending { background: #FFF3B0; color: #806b00; }
+    .approval-badge.approved { background: #C4F6D5; color: #1b7a3d; }
+    .approval-badge.rejected { background: #FBC9C4; color: #a3231b; }
+
+    .card-content { padding: 12px; }
+    .card-title { font-weight: 600; font-size: 14px; color: #333; margin-bottom: 8px; }
+    .card-meta { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: #777; }
+    .card-deadline.overdue { color: #dc3545; font-weight: 600; }
+    .card-creator { font-size: 11px; color: #aaa; margin-top: 6px; }
+    .card-icons { display: flex; gap: 8px; margin-top: 6px; font-size: 11px; color: #999; }
+
     .modal-overlay {
       display: none;
       position: fixed;
@@ -233,38 +151,22 @@
       padding: 20px;
     }
 
-    .modal-overlay.show {
-      display: flex;
-    }
+    .modal-overlay.show { display: flex; }
 
     .modal {
       background: white;
       border-radius: 16px;
       width: 100%;
-      max-width: 520px;
+      max-width: 540px;
       max-height: 90vh;
       overflow-y: auto;
       padding: 24px;
       box-shadow: 0 20px 60px rgba(0,0,0,0.3);
     }
 
-    .modal h2 {
-      font-size: 20px;
-      margin-bottom: 20px;
-      color: #333;
-    }
-
-    .form-group {
-      margin-bottom: 16px;
-    }
-
-    .form-group label {
-      display: block;
-      font-size: 13px;
-      font-weight: 600;
-      color: #555;
-      margin-bottom: 6px;
-    }
+    .modal h2 { font-size: 20px; margin-bottom: 20px; color: #333; }
+    .form-group { margin-bottom: 16px; }
+    .form-group label { display: block; font-size: 13px; font-weight: 600; color: #555; margin-bottom: 6px; }
 
     .form-group input,
     .form-group select,
@@ -277,10 +179,7 @@
       font-family: inherit;
     }
 
-    .form-group textarea {
-      resize: vertical;
-      min-height: 80px;
-    }
+    .form-group textarea { resize: vertical; min-height: 80px; }
 
     .form-group input:focus,
     .form-group select:focus,
@@ -290,12 +189,7 @@
       box-shadow: 0 0 0 3px rgba(255,107,53,0.1);
     }
 
-    .modal-actions {
-      display: flex;
-      gap: 10px;
-      justify-content: flex-end;
-      margin-top: 20px;
-    }
+    .modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; flex-wrap: wrap; }
 
     .readonly-info {
       font-size: 12px;
@@ -306,7 +200,6 @@
       margin-bottom: 16px;
     }
 
-    /* ===== EMPTY STATE ===== */
     .empty-hint {
       text-align: center;
       font-size: 12px;
@@ -316,6 +209,102 @@
       border-radius: 8px;
     }
 
+    .approval-section {
+      display: none;
+      background: #fff8ee;
+      border: 1px solid #ffe0b2;
+      border-radius: 10px;
+      padding: 14px;
+      margin-bottom: 16px;
+    }
+
+    .approval-section.show { display: block; }
+
+    .approval-status-line { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; font-size: 13px; font-weight: 600; }
+    .status-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+    .status-dot.pending { background: #FFD600; }
+    .status-dot.approved { background: #69F0AE; }
+    .status-dot.rejected { background: #FF5252; }
+    .approval-buttons { display: flex; gap: 8px; flex-wrap: wrap; }
+
+    .voice-slot {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: #f8f9fa;
+      border-radius: 8px;
+      padding: 10px 12px;
+      margin-bottom: 8px;
+      flex-wrap: wrap;
+    }
+
+    .voice-slot audio { flex: 1; min-width: 160px; height: 34px; }
+
+    .rec-btn {
+      width: 34px; height: 34px;
+      border-radius: 50%;
+      border: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      color: white;
+      background: #dc3545;
+      flex-shrink: 0;
+    }
+
+    .rec-btn.recording { animation: pulse 1s infinite; }
+
+    @keyframes pulse {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(220,53,69,0.5); }
+      50% { box-shadow: 0 0 0 8px rgba(220,53,69,0); }
+    }
+
+    .voice-empty { font-size: 12px; color: #999; }
+    .voice-remove { background: none; border: none; color: #dc3545; cursor: pointer; font-size: 16px; }
+
+    .attach-dropzone {
+      border: 2px dashed #ccc;
+      border-radius: 8px;
+      padding: 14px;
+      text-align: center;
+      font-size: 12px;
+      color: #888;
+      cursor: pointer;
+      margin-bottom: 10px;
+    }
+
+    .attach-dropzone:hover { border-color: #FF6B35; color: #FF6B35; }
+    .attach-list { display: flex; flex-direction: column; gap: 8px; }
+
+    .attach-item { display: flex; align-items: center; gap: 10px; background: #f8f9fa; border-radius: 8px; padding: 8px 10px; }
+
+    .attach-thumb { width: 36px; height: 36px; border-radius: 6px; object-fit: cover; background: #ddd; flex-shrink: 0; }
+
+    .attach-icon {
+      width: 36px; height: 36px;
+      border-radius: 6px;
+      background: #e0e0e0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      flex-shrink: 0;
+    }
+
+    .attach-name {
+      flex: 1;
+      font-size: 12px;
+      color: #444;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      cursor: pointer;
+    }
+
+    .attach-remove { background: none; border: none; color: #dc3545; cursor: pointer; font-size: 16px; flex-shrink: 0; }
+
     @media (max-width: 768px) {
       .stats-bar { padding: 12px; }
       .board { padding: 0 12px 12px; }
@@ -324,7 +313,6 @@
 </head>
 <body>
 
-  <!-- HEADER -->
   <div class="header">
     <h1>📋 TeamTasks</h1>
     <div class="header-right">
@@ -333,18 +321,15 @@
     </div>
   </div>
 
-  <!-- STATS -->
   <div class="stats-bar" id="statsBar"></div>
 
-  <!-- KANBAN BOARD -->
   <div class="board" id="board"></div>
 
-  <!-- TASK MODAL -->
   <div class="modal-overlay" id="taskModal">
     <div class="modal">
       <h2 id="modalTitle">New Task</h2>
       <div class="readonly-info" id="createdByInfo" style="display:none;"></div>
-      
+
       <div class="form-group">
         <label>Task Name *</label>
         <input type="text" id="fName" placeholder="Enter task name">
@@ -391,14 +376,48 @@
 
       <div class="form-group">
         <label>Status</label>
-        <select id="fStatus">
+        <select id="fStatus" onchange="onStatusChange()">
           <option value="todo">To Do</option>
           <option value="in-progress">In Progress</option>
+          <option value="approval">Approval</option>
           <option value="done">Done</option>
           <option value="need-help">Need Help</option>
           <option value="hold">Hold</option>
           <option value="future">Future</option>
         </select>
+      </div>
+
+      <div class="approval-section" id="approvalSection">
+        <div class="form-group" style="margin-bottom:10px;">
+          <label>Tagged for Approval</label>
+          <select id="fApprover" disabled>
+            <option>Manager Admin</option>
+          </select>
+        </div>
+        <div class="approval-status-line">
+          <span class="status-dot" id="approvalDot"></span>
+          <span id="approvalStatusText">Pending</span>
+        </div>
+        <div class="approval-buttons">
+          <button type="button" class="btn btn-approve btn-small" onclick="setApproval('approved')">✅ Approve</button>
+          <button type="button" class="btn btn-reject btn-small" onclick="setApproval('rejected')">❌ Reject</button>
+          <button type="button" class="btn btn-outline btn-small" onclick="setApproval('pending')">↺ Reset to Pending</button>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Voice Notes (up to 2)</label>
+        <div id="voiceSlot0"></div>
+        <div id="voiceSlot1"></div>
+      </div>
+
+      <div class="form-group">
+        <label>Attachments (image, video, doc — up to 4)</label>
+        <div class="attach-dropzone" onclick="document.getElementById('fileInput').click()">
+          📎 Click to add files (<span id="attachCount">0</span>/4)
+        </div>
+        <input type="file" id="fileInput" multiple accept="image/*,video/*,.pdf,.doc,.docx,.txt" style="display:none" onchange="handleFiles(this.files)">
+        <div class="attach-list" id="attachList"></div>
       </div>
 
       <div class="modal-actions">
@@ -410,10 +429,10 @@
   </div>
 
   <script>
-    // ===== STATE =====
     const STATUSES = [
       { key: 'todo', label: 'To Do' },
       { key: 'in-progress', label: 'In Progress' },
+      { key: 'approval', label: 'Approval' },
       { key: 'done', label: 'Done' },
       { key: 'need-help', label: 'Need Help' },
       { key: 'hold', label: 'Hold' },
@@ -423,18 +442,23 @@
     let tasks = [];
     let editingId = null;
 
-    // ===== INIT =====
+    let tempVoiceNotes = [null, null];
+    let tempAttachments = [];
+    let tempApproval = 'pending';
+    let mediaRecorder = null;
+    let recordingSlot = null;
+    let recordedChunks = [];
+
     function init() {
       const saved = localStorage.getItem('teamtasks_data');
       if (saved) {
         tasks = JSON.parse(saved);
       } else {
-        // Starter demo tasks
         tasks = [
-          { id: 1, name: 'Design Dashboard UI', desc: 'Create modern mockups', assigned: 'John', tagged: ['Sarah'], deadline: '2026-08-28', urgency: 'high', status: 'in-progress', createdBy: 'Manager Admin' },
-          { id: 2, name: 'Setup Database', desc: 'Configure data storage', assigned: 'Alex', tagged: [], deadline: '2026-08-25', urgency: 'high', status: 'todo', createdBy: 'Manager Admin' },
-          { id: 3, name: 'Write Documentation', desc: 'User guide for the team', assigned: 'Sarah', tagged: [], deadline: '2026-09-05', urgency: 'low', status: 'future', createdBy: 'Manager Admin' },
-          { id: 4, name: 'Review Q3 Reports', desc: 'Quarterly review', assigned: 'Manager Admin', tagged: ['John', 'Alex'], deadline: '2026-08-24', urgency: 'medium', status: 'need-help', createdBy: 'Manager Admin' }
+          { id: 1, name: 'Design Dashboard UI', desc: 'Create modern mockups', assigned: 'John', tagged: ['Sarah'], deadline: '2026-08-28', urgency: 'high', status: 'in-progress', createdBy: 'Manager Admin', voiceNotes: [null, null], attachments: [] },
+          { id: 2, name: 'Setup Database', desc: 'Configure data storage', assigned: 'Alex', tagged: [], deadline: '2026-08-25', urgency: 'high', status: 'todo', createdBy: 'Manager Admin', voiceNotes: [null, null], attachments: [] },
+          { id: 3, name: 'Write Documentation', desc: 'User guide for the team', assigned: 'Sarah', tagged: [], deadline: '2026-09-05', urgency: 'low', status: 'future', createdBy: 'Manager Admin', voiceNotes: [null, null], attachments: [] },
+          { id: 4, name: 'Marketing Budget Approval', desc: 'Q4 campaign budget sign-off', assigned: 'John', tagged: [], deadline: '2026-08-24', urgency: 'medium', status: 'approval', approvalStatus: 'pending', createdBy: 'John', voiceNotes: [null, null], attachments: [] }
         ];
         persist();
       }
@@ -445,7 +469,6 @@
       localStorage.setItem('teamtasks_data', JSON.stringify(tasks));
     }
 
-    // ===== RENDER =====
     function render() {
       renderStats();
       renderBoard();
@@ -455,14 +478,14 @@
       const total = tasks.length;
       const done = tasks.filter(t => t.status === 'done').length;
       const inProgress = tasks.filter(t => t.status === 'in-progress').length;
-      const needHelp = tasks.filter(t => t.status === 'need-help').length;
+      const pendingApproval = tasks.filter(t => t.status === 'approval' && (t.approvalStatus || 'pending') === 'pending').length;
       const overdue = tasks.filter(t => t.deadline && t.deadline < today() && t.status !== 'done').length;
 
       document.getElementById('statsBar').innerHTML = `
         <div class="stat-card"><div class="stat-number">${total}</div><div class="stat-label">Total Tasks</div></div>
         <div class="stat-card"><div class="stat-number">${inProgress}</div><div class="stat-label">In Progress</div></div>
         <div class="stat-card"><div class="stat-number">${done}</div><div class="stat-label">Completed</div></div>
-        <div class="stat-card"><div class="stat-number">${needHelp}</div><div class="stat-label">Need Help</div></div>
+        <div class="stat-card"><div class="stat-number" style="color:#806b00">${pendingApproval}</div><div class="stat-label">Awaiting Approval</div></div>
         <div class="stat-card"><div class="stat-number" style="color:${overdue > 0 ? '#dc3545' : '#28a745'}">${overdue}</div><div class="stat-label">Overdue</div></div>
       `;
     }
@@ -490,7 +513,6 @@
         const body = col.querySelector('.column-body');
         colTasks.forEach(t => body.appendChild(makeCard(t)));
 
-        // Drag & drop targets
         col.addEventListener('dragover', e => { e.preventDefault(); col.classList.add('drag-over'); });
         col.addEventListener('dragleave', () => col.classList.remove('drag-over'));
         col.addEventListener('drop', e => {
@@ -500,6 +522,9 @@
           const task = tasks.find(t => t.id === id);
           if (task && task.status !== s.key) {
             task.status = s.key;
+            if (s.key === 'approval' && !task.approvalStatus) {
+              task.approvalStatus = 'pending';
+            }
             persist();
             render();
           }
@@ -511,12 +536,24 @@
 
     function makeCard(task) {
       const card = document.createElement('div');
-      card.className = `task-card urgency-${task.urgency}`;
+      let cls = `task-card urgency-${task.urgency}`;
+      if (task.status === 'approval') {
+        cls += ` approval-${task.approvalStatus || 'pending'}`;
+      }
+      card.className = cls;
       card.draggable = true;
 
       const isOverdue = task.deadline && task.deadline < today() && task.status !== 'done';
       const taggedHtml = task.tagged && task.tagged.length
         ? `<span>🏷️ ${task.tagged.join(', ')}</span>` : '';
+
+      const voiceCount = (task.voiceNotes || []).filter(Boolean).length;
+      const fileCount = (task.attachments || []).length;
+      const iconsHtml = (voiceCount || fileCount)
+        ? `<div class="card-icons">${voiceCount ? `🎙️ ${voiceCount}` : ''} ${fileCount ? `📎 ${fileCount}` : ''}</div>` : '';
+
+      const approvalBadge = task.status === 'approval'
+        ? `<span class="approval-badge ${task.approvalStatus || 'pending'}">${task.approvalStatus || 'pending'}</span>` : '';
 
       card.innerHTML = `
         <div class="card-urgency"></div>
@@ -527,6 +564,8 @@
             ${task.deadline ? `<span class="card-deadline ${isOverdue ? 'overdue' : ''}">📅 ${task.deadline}${isOverdue ? ' ⚠️ Overdue' : ''}</span>` : ''}
             ${taggedHtml}
           </div>
+          ${approvalBadge}
+          ${iconsHtml}
           <div class="card-creator">Created by ${esc(task.createdBy)}</div>
         </div>
       `;
@@ -541,9 +580,12 @@
       return card;
     }
 
-    // ===== MODAL =====
     function openAddModal() {
       editingId = null;
+      tempVoiceNotes = [null, null];
+      tempAttachments = [];
+      tempApproval = 'pending';
+
       document.getElementById('modalTitle').textContent = 'New Task';
       document.getElementById('createdByInfo').style.display = 'none';
       document.getElementById('deleteBtn').style.display = 'none';
@@ -554,6 +596,10 @@
       document.getElementById('fDeadline').value = '';
       document.getElementById('fUrgency').value = 'medium';
       document.getElementById('fStatus').value = 'todo';
+
+      renderVoiceSlots();
+      renderAttachments();
+      onStatusChange();
       document.getElementById('taskModal').classList.add('show');
     }
 
@@ -561,6 +607,10 @@
       const task = tasks.find(t => t.id === id);
       if (!task) return;
       editingId = id;
+      tempVoiceNotes = (task.voiceNotes && task.voiceNotes.length === 2) ? [...task.voiceNotes] : [null, null];
+      tempAttachments = task.attachments ? [...task.attachments] : [];
+      tempApproval = task.approvalStatus || 'pending';
+
       document.getElementById('modalTitle').textContent = 'Edit Task';
       const info = document.getElementById('createdByInfo');
       info.style.display = 'block';
@@ -573,10 +623,15 @@
       document.getElementById('fDeadline').value = task.deadline || '';
       document.getElementById('fUrgency').value = task.urgency;
       document.getElementById('fStatus').value = task.status;
+
+      renderVoiceSlots();
+      renderAttachments();
+      onStatusChange();
       document.getElementById('taskModal').classList.add('show');
     }
 
     function closeModal() {
+      stopRecordingIfActive();
       document.getElementById('taskModal').classList.remove('show');
       editingId = null;
     }
@@ -585,6 +640,8 @@
       const name = document.getElementById('fName').value.trim();
       if (!name) { alert('Please enter a task name'); return; }
 
+      const status = document.getElementById('fStatus').value;
+
       const data = {
         name,
         desc: document.getElementById('fDesc').value.trim(),
@@ -592,8 +649,14 @@
         tagged: getMultiSelect('fTagged'),
         deadline: document.getElementById('fDeadline').value,
         urgency: document.getElementById('fUrgency').value,
-        status: document.getElementById('fStatus').value
+        status,
+        voiceNotes: tempVoiceNotes,
+        attachments: tempAttachments
       };
+
+      if (status === 'approval') {
+        data.approvalStatus = tempApproval || 'pending';
+      }
 
       if (editingId) {
         const task = tasks.find(t => t.id === editingId);
@@ -616,7 +679,180 @@
       closeModal();
     }
 
-    // ===== HELPERS =====
+    function onStatusChange() {
+      const status = document.getElementById('fStatus').value;
+      const section = document.getElementById('approvalSection');
+      if (status === 'approval') {
+        section.classList.add('show');
+        updateApprovalUI();
+      } else {
+        section.classList.remove('show');
+      }
+    }
+
+    function setApproval(value) {
+      tempApproval = value;
+      updateApprovalUI();
+    }
+
+    function updateApprovalUI() {
+      const dot = document.getElementById('approvalDot');
+      const text = document.getElementById('approvalStatusText');
+      dot.className = `status-dot ${tempApproval}`;
+      text.textContent = tempApproval.charAt(0).toUpperCase() + tempApproval.slice(1);
+    }
+
+    function renderVoiceSlots() {
+      for (let i = 0; i < 2; i++) {
+        const container = document.getElementById('voiceSlot' + i);
+        const note = tempVoiceNotes[i];
+
+        if (note) {
+          container.innerHTML = `
+            <div class="voice-slot">
+              <span>🎙️ Note ${i + 1}</span>
+              <audio controls src="${note}"></audio>
+              <button type="button" class="voice-remove" onclick="removeVoiceNote(${i})" title="Delete">🗑️</button>
+            </div>
+          `;
+        } else {
+          container.innerHTML = `
+            <div class="voice-slot">
+              <button type="button" class="rec-btn" id="recBtn${i}" onclick="toggleRecording(${i})" title="Record">🎤</button>
+              <span class="voice-empty">Voice note ${i + 1} — not recorded</span>
+            </div>
+          `;
+        }
+      }
+    }
+
+    async function toggleRecording(slot) {
+      if (recordingSlot === slot) {
+        mediaRecorder.stop();
+        return;
+      }
+      if (recordingSlot !== null) {
+        alert('Please stop the current recording first.');
+        return;
+      }
+
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        recordedChunks = [];
+        mediaRecorder = new MediaRecorder(stream);
+        recordingSlot = slot;
+
+        mediaRecorder.ondataavailable = e => {
+          if (e.data.size > 0) recordedChunks.push(e.data);
+        };
+
+        mediaRecorder.onstop = () => {
+          const blob = new Blob(recordedChunks, { type: 'audio/webm' });
+          const reader = new FileReader();
+          reader.onload = () => {
+            tempVoiceNotes[slot] = reader.result;
+            renderVoiceSlots();
+          };
+          reader.readAsDataURL(blob);
+          stream.getTracks().forEach(t => t.stop());
+          recordingSlot = null;
+        };
+
+        mediaRecorder.start();
+        const btn = document.getElementById('recBtn' + slot);
+        if (btn) { btn.classList.add('recording'); btn.textContent = '⏹️'; }
+      } catch (err) {
+        alert('Microphone access denied or unavailable: ' + err.message);
+        recordingSlot = null;
+      }
+    }
+
+    function stopRecordingIfActive() {
+      if (mediaRecorder && recordingSlot !== null) {
+        try { mediaRecorder.stop(); } catch (e) {}
+      }
+      recordingSlot = null;
+    }
+
+    function removeVoiceNote(slot) {
+      tempVoiceNotes[slot] = null;
+      renderVoiceSlots();
+    }
+
+    function handleFiles(fileList) {
+      const files = Array.from(fileList);
+      const remaining = 4 - tempAttachments.length;
+
+      if (remaining <= 0) {
+        alert('Maximum 4 attachments allowed.');
+        document.getElementById('fileInput').value = '';
+        return;
+      }
+
+      const toAdd = files.slice(0, remaining);
+      if (files.length > remaining) {
+        alert(`Only ${remaining} more file(s) can be added (max 4 total).`);
+      }
+
+      let loaded = 0;
+      toAdd.forEach(file => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          tempAttachments.push({
+            name: file.name,
+            type: file.type,
+            data: reader.result
+          });
+          loaded++;
+          if (loaded === toAdd.length) {
+            renderAttachments();
+          }
+        };
+        reader.readAsDataURL(file);
+      });
+
+      document.getElementById('fileInput').value = '';
+    }
+
+    function removeAttachment(index) {
+      tempAttachments.splice(index, 1);
+      renderAttachments();
+    }
+
+    function renderAttachments() {
+      document.getElementById('attachCount').textContent = tempAttachments.length;
+      const list = document.getElementById('attachList');
+      list.innerHTML = '';
+
+      tempAttachments.forEach((att, i) => {
+        const item = document.createElement('div');
+        item.className = 'attach-item';
+
+        const isImage = att.type && att.type.startsWith('image/');
+        const icon = isImage
+          ? `<img class="attach-thumb" src="${att.data}">`
+          : `<div class="attach-icon">${fileIcon(att.type)}</div>`;
+
+        item.innerHTML = `
+          ${icon}
+          <span class="attach-name">${esc(att.name)}</span>
+          <button type="button" class="attach-remove" onclick="removeAttachment(${i})" title="Remove">🗑️</button>
+        `;
+        item.querySelector('.attach-name').addEventListener('click', () => {
+          window.open(att.data, '_blank');
+        });
+        list.appendChild(item);
+      });
+    }
+
+    function fileIcon(type) {
+      if (!type) return '📄';
+      if (type.startsWith('video/')) return '🎬';
+      if (type.includes('pdf')) return '📕';
+      if (type.includes('word') || type.includes('doc')) return '📝';
+      return '📄';
+    }
+
     function today() {
       return new Date().toISOString().split('T')[0];
     }
@@ -641,12 +877,10 @@
       Array.from(document.getElementById(id).options).forEach(o => o.selected = false);
     }
 
-    // Close modal on overlay click
     document.getElementById('taskModal').addEventListener('click', e => {
       if (e.target.id === 'taskModal') closeModal();
     });
 
-    // Close on Escape
     document.addEventListener('keydown', e => {
       if (e.key === 'Escape') closeModal();
     });
