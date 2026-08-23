@@ -90,6 +90,38 @@
 
     .login-error.show { display: block; }
 
+    .login-hint-toggle {
+      text-align: center;
+      font-size: 12px;
+      color: var(--teal-dark);
+      font-weight: 600;
+      cursor: pointer;
+      margin-top: 16px;
+    }
+
+    .login-hint-toggle:hover { text-decoration: underline; }
+
+    .login-hint {
+      display: none;
+      margin-top: 12px;
+      background: #F8FBFE;
+      border: 1px solid var(--border-soft);
+      border-radius: 10px;
+      padding: 10px 12px;
+    }
+
+    .login-hint.show { display: block; }
+
+    .login-hint-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 12px;
+      padding: 4px 0;
+      color: var(--navy);
+    }
+
+    .login-hint-row span:last-child { color: var(--label-gray); font-family: monospace; }
+
     /* ===== HEADER ===== */
     .header {
       background: var(--card-bg);
@@ -807,6 +839,8 @@
       </div>
       <div id="loginError" class="login-error"></div>
       <button class="btn btn-primary" style="width:100%;justify-content:center;" onclick="handleLoginSubmit()">Log In</button>
+      <div class="login-hint-toggle" onclick="toggleLoginHint()">Forgot your login ID?</div>
+      <div class="login-hint" id="loginHint"></div>
     </div>
   </div>
 
@@ -1068,6 +1102,18 @@
         if (!e.username) { e.username = slugify(e.name); needsMigration = true; }
         if (!e.password) { e.password = '1234'; needsMigration = true; }
       });
+
+      // Give the sole manager the friendly 'manager' login ID if it isn't taken
+      const mgrs = employees.filter(e => e.role === 'Manager');
+      if (mgrs.length === 1) {
+        const mgr = mgrs[0];
+        const takenByOther = employees.some(e => e.id !== mgr.id && e.username === 'manager');
+        if (mgr.username !== 'manager' && !takenByOther) {
+          mgr.username = 'manager';
+          needsMigration = true;
+        }
+      }
+
       if (needsMigration || !savedEmp) persistEmployees();
 
       const codes = tasks.map(t => t.code).filter(Boolean).map(c => parseInt(c.replace('T-', ''), 10)).filter(n => !isNaN(n));
@@ -1101,6 +1147,17 @@
       document.getElementById('loginUsername').value = '';
       document.getElementById('loginPassword').value = '';
       document.getElementById('loginError').classList.remove('show');
+      document.getElementById('loginHint').classList.remove('show');
+    }
+
+    function toggleLoginHint() {
+      const hint = document.getElementById('loginHint');
+      if (!hint.classList.contains('show')) {
+        hint.innerHTML = employees.map(e => `
+          <div class="login-hint-row"><span>${esc(e.name)}</span><span>${esc(e.username)}</span></div>
+        `).join('') + '<div class="login-hint-row" style="border-top:1px solid var(--border-soft);margin-top:6px;padding-top:8px;"><span>Default password (unless changed)</span><span>1234</span></div>';
+      }
+      hint.classList.toggle('show');
     }
 
     function showApp() {
