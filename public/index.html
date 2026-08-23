@@ -59,7 +59,7 @@
 
     /* ===== HEADER ===== */
     .header {
-      background: rgba(255,255,255,0.72);
+      background: linear-gradient(135deg, rgba(255,231,193,0.6) 0%, rgba(255,213,153,0.45) 45%, rgba(255,246,224,0.6) 100%);
       backdrop-filter: blur(6px);
       border-bottom: 1px solid var(--hairline);
       padding: 22px 32px;
@@ -129,9 +129,11 @@
       flex: 1;
       min-width: 140px;
       text-align: left;
-      padding: 0 24px 20px 0;
+      padding: 14px 20px 18px 16px;
       border-right: 1px solid var(--hairline);
       margin-right: 24px;
+      background: linear-gradient(180deg, rgba(255,244,201,0.55) 0%, rgba(255,244,201,0.15) 100%);
+      border-radius: 6px;
     }
 
     .stat-card:last-child { border-right: none; margin-right: 0; }
