@@ -3,205 +3,655 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>TeamTasks - Task Management</title>
-  <link rel="stylesheet" href="style.css">
-  <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
+  <title>TeamTasks - Team Task Management</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: #f0f2f5;
+      min-height: 100vh;
+    }
+
+    /* ===== HEADER ===== */
+    .header {
+      background: linear-gradient(135deg, #FF6B35 0%, #FFA500 50%, #FFD700 100%);
+      padding: 16px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.15);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .header h1 {
+      color: white;
+      font-size: 24px;
+      text-shadow: 1px 1px 3px rgba(0,0,0,0.2);
+    }
+
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .user-badge {
+      background: rgba(255,255,255,0.25);
+      color: white;
+      padding: 8px 16px;
+      border-radius: 20px;
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    .btn {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-primary {
+      background: white;
+      color: #FF6B35;
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    }
+
+    .btn-save {
+      background: #28a745;
+      color: white;
+    }
+
+    .btn-cancel {
+      background: #6c757d;
+      color: white;
+    }
+
+    .btn-delete {
+      background: #dc3545;
+      color: white;
+    }
+
+    /* ===== STATS BAR ===== */
+    .stats-bar {
+      display: flex;
+      gap: 16px;
+      padding: 20px 24px;
+      flex-wrap: wrap;
+    }
+
+    .stat-card {
+      background: white;
+      padding: 16px 24px;
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+      flex: 1;
+      min-width: 140px;
+      text-align: center;
+    }
+
+    .stat-number {
+      font-size: 28px;
+      font-weight: bold;
+      color: #FF6B35;
+    }
+
+    .stat-label {
+      font-size: 12px;
+      color: #888;
+      margin-top: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    /* ===== KANBAN BOARD ===== */
+    .board {
+      display: flex;
+      gap: 16px;
+      padding: 0 24px 24px;
+      overflow-x: auto;
+      align-items: flex-start;
+    }
+
+    .column {
+      background: #e9ecef;
+      border-radius: 12px;
+      min-width: 260px;
+      width: 260px;
+      flex-shrink: 0;
+      padding: 12px;
+    }
+
+    .column-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 4px 12px;
+      font-weight: 700;
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: #555;
+    }
+
+    .column-count {
+      background: rgba(0,0,0,0.1);
+      border-radius: 10px;
+      padding: 2px 10px;
+      font-size: 12px;
+    }
+
+    .column-body {
+      min-height: 100px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .column.drag-over {
+      background: #d4e9ff;
+      outline: 2px dashed #007bff;
+    }
+
+    /* ===== TASK CARDS ===== */
+    .task-card {
+      background: white;
+      border-radius: 10px;
+      padding: 0;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+      cursor: grab;
+      overflow: hidden;
+      transition: transform 0.15s, box-shadow 0.15s;
+    }
+
+    .task-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 16px rgba(0,0,0,0.15);
+    }
+
+    .task-card.dragging {
+      opacity: 0.5;
+    }
+
+    .card-urgency {
+      height: 6px;
+    }
+
+    .urgency-high .card-urgency { background: #e57373; }
+    .urgency-medium .card-urgency { background: #ffb74d; }
+    .urgency-low .card-urgency { background: #81c784; }
+
+    .card-content {
+      padding: 12px;
+    }
+
+    .card-title {
+      font-weight: 600;
+      font-size: 14px;
+      color: #333;
+      margin-bottom: 8px;
+    }
+
+    .card-meta {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      font-size: 12px;
+      color: #777;
+    }
+
+    .card-deadline.overdue {
+      color: #dc3545;
+      font-weight: 600;
+    }
+
+    .card-creator {
+      font-size: 11px;
+      color: #aaa;
+      margin-top: 6px;
+    }
+
+    /* ===== MODAL ===== */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.5);
+      z-index: 200;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .modal-overlay.show {
+      display: flex;
+    }
+
+    .modal {
+      background: white;
+      border-radius: 16px;
+      width: 100%;
+      max-width: 520px;
+      max-height: 90vh;
+      overflow-y: auto;
+      padding: 24px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    }
+
+    .modal h2 {
+      font-size: 20px;
+      margin-bottom: 20px;
+      color: #333;
+    }
+
+    .form-group {
+      margin-bottom: 16px;
+    }
+
+    .form-group label {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      color: #555;
+      margin-bottom: 6px;
+    }
+
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      font-size: 14px;
+      font-family: inherit;
+    }
+
+    .form-group textarea {
+      resize: vertical;
+      min-height: 80px;
+    }
+
+    .form-group input:focus,
+    .form-group select:focus,
+    .form-group textarea:focus {
+      outline: none;
+      border-color: #FF6B35;
+      box-shadow: 0 0 0 3px rgba(255,107,53,0.1);
+    }
+
+    .modal-actions {
+      display: flex;
+      gap: 10px;
+      justify-content: flex-end;
+      margin-top: 20px;
+    }
+
+    .readonly-info {
+      font-size: 12px;
+      color: #999;
+      background: #f8f9fa;
+      padding: 8px 12px;
+      border-radius: 6px;
+      margin-bottom: 16px;
+    }
+
+    /* ===== EMPTY STATE ===== */
+    .empty-hint {
+      text-align: center;
+      font-size: 12px;
+      color: #aaa;
+      padding: 16px 8px;
+      border: 2px dashed #ccc;
+      border-radius: 8px;
+    }
+
+    @media (max-width: 768px) {
+      .stats-bar { padding: 12px; }
+      .board { padding: 0 12px 12px; }
+    }
+  </style>
 </head>
 <body>
-  <div id="app"></div>
-  
-  <!-- Login Screen -->
-  <div id="loginContainer" class="login-container">
-    <div class="login-box">
-      <h1>TeamTasks</h1>
-      <p class="subtitle">Task Management for Teams</p>
-      <form id="loginForm">
-        <input type="text" id="username" placeholder="Username" required>
-        <input type="password" id="password" placeholder="Password" required>
-        <button type="submit">Login</button>
-        <p class="demo-info">Demo: username=manager, password=password123</p>
-      </form>
+
+  <!-- HEADER -->
+  <div class="header">
+    <h1>📋 TeamTasks</h1>
+    <div class="header-right">
+      <span class="user-badge">👤 Manager Admin</span>
+      <button class="btn btn-primary" onclick="openAddModal()">+ New Task</button>
     </div>
   </div>
 
-  <!-- Dashboard Screen -->
-  <div id="dashboardContainer" style="display: none;">
-    <!-- Header -->
-    <header class="header">
-      <div class="header-left">
-        <h1>TeamTasks Dashboard</h1>
-        <p id="userGreeting"></p>
-      </div>
-      <div class="header-right">
-        <button id="addTaskBtn" class="btn-primary" style="display: none;">+ New Task</button>
-        <button id="addUserBtn" class="btn-secondary" style="display: none;">+ Add Employee</button>
-        <button id="logoutBtn" class="btn-logout">Logout</button>
-      </div>
-    </header>
+  <!-- STATS -->
+  <div class="stats-bar" id="statsBar"></div>
 
-    <!-- Kanban Board -->
-    <div class="board-container">
-      <div class="column" data-status="todo">
-        <div class="column-header">📝 To Do</div>
-        <div class="column-content" id="todo"></div>
-      </div>
+  <!-- KANBAN BOARD -->
+  <div class="board" id="board"></div>
 
-      <div class="column" data-status="in-progress">
-        <div class="column-header">⚙️ In Progress</div>
-        <div class="column-content" id="in-progress"></div>
-      </div>
-
-      <div class="column" data-status="done">
-        <div class="column-header">✅ Done</div>
-        <div class="column-content" id="done"></div>
-      </div>
-
-      <div class="column" data-status="need-help">
-        <div class="column-header">🆘 Need Help</div>
-        <div class="column-content" id="need-help"></div>
-      </div>
-
-      <div class="column" data-status="hold">
-        <div class="column-header">⏸️ Hold</div>
-        <div class="column-content" id="hold"></div>
-      </div>
-
-      <div class="column" data-status="future">
-        <div class="column-header">🔮 Future</div>
-        <div class="column-content" id="future"></div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Task Modal -->
-  <div id="taskModal" class="modal-overlay">
+  <!-- TASK MODAL -->
+  <div class="modal-overlay" id="taskModal">
     <div class="modal">
-      <div class="modal-header">
-        <h2 id="modalTitle">Task Details</h2>
-        <button class="modal-close">&times;</button>
+      <h2 id="modalTitle">New Task</h2>
+      <div class="readonly-info" id="createdByInfo" style="display:none;"></div>
+      
+      <div class="form-group">
+        <label>Task Name *</label>
+        <input type="text" id="fName" placeholder="Enter task name">
       </div>
 
-      <div class="modal-content">
-        <div class="modal-section">
-          <label>Task Name</label>
-          <input type="text" id="taskName" class="modal-input" placeholder="Enter task name">
-        </div>
-
-        <div class="modal-section">
-          <label>Description</label>
-          <textarea id="taskDescription" class="modal-textarea" placeholder="Add task details..."></textarea>
-        </div>
-
-        <div class="two-col">
-          <div class="modal-section">
-            <label>Deadline</label>
-            <input type="date" id="taskDeadline" class="modal-input">
-          </div>
-          <div class="modal-section">
-            <label>Urgency</label>
-            <select id="taskUrgency" class="modal-select">
-              <option value="low">🟢 Low</option>
-              <option value="medium">🟡 Medium</option>
-              <option value="high">🔴 High</option>
-            </select>
-          </div>
-        </div>
-
-        <div class="modal-section">
-          <label>Status</label>
-          <select id="taskStatus" class="modal-select">
-            <option value="todo">To Do</option>
-            <option value="in-progress">In Progress</option>
-            <option value="done">Done</option>
-            <option value="need-help">Need Help</option>
-            <option value="hold">Hold</option>
-            <option value="future">Future</option>
-          </select>
-        </div>
-
-        <div class="modal-section">
-          <label>Tag for Help</label>
-          <div style="display: flex; gap: 10px; margin-bottom: 10px;">
-            <input type="text" id="tagInput" class="modal-input" placeholder="Type name and press Enter" style="flex: 1;">
-            <select id="userSelect" class="modal-select" style="flex: 1;"></select>
-          </div>
-          <div id="taggedUsers" class="tags-container"></div>
-        </div>
-
-        <div class="modal-section">
-          <label>📸 Photo</label>
-          <div class="upload-area" id="photoUpload">
-            <div class="upload-icon">📷</div>
-            <div class="upload-text">Click to upload photo</div>
-            <input type="file" class="file-input" id="photoInput" accept="image/*">
-          </div>
-          <div id="photoList" class="uploaded-items"></div>
-        </div>
-
-        <div class="modal-section">
-          <label>📎 Attachments</label>
-          <div class="upload-area" id="docUpload">
-            <div class="upload-icon">📄</div>
-            <div class="upload-text">Click to upload documents</div>
-            <input type="file" class="file-input" id="docInput" multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.txt">
-          </div>
-          <div id="docList" class="uploaded-items"></div>
-        </div>
-
-        <div class="modal-section">
-          <label>Created By</label>
-          <input type="text" id="taskCreatedBy" class="modal-input" disabled>
-        </div>
+      <div class="form-group">
+        <label>Description</label>
+        <textarea id="fDesc" placeholder="Describe the task..."></textarea>
       </div>
 
-      <div class="modal-buttons">
-        <button id="saveTaskBtn" class="btn-primary">Save Task</button>
-        <button id="cancelTaskBtn" class="btn-secondary">Cancel</button>
-        <button id="deleteTaskBtn" class="btn-danger" style="display: none;">Delete Task</button>
+      <div class="form-group">
+        <label>Assigned To</label>
+        <select id="fAssigned">
+          <option value="Manager Admin">Manager Admin</option>
+          <option value="John">John</option>
+          <option value="Sarah">Sarah</option>
+          <option value="Alex">Alex</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>Tag for Help (optional)</label>
+        <select id="fTagged" multiple size="4">
+          <option value="Manager Admin">Manager Admin</option>
+          <option value="John">John</option>
+          <option value="Sarah">Sarah</option>
+          <option value="Alex">Alex</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>Deadline</label>
+        <input type="date" id="fDeadline">
+      </div>
+
+      <div class="form-group">
+        <label>Urgency</label>
+        <select id="fUrgency">
+          <option value="low">🟢 Low</option>
+          <option value="medium" selected>🟡 Medium</option>
+          <option value="high">🔴 High</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>Status</label>
+        <select id="fStatus">
+          <option value="todo">To Do</option>
+          <option value="in-progress">In Progress</option>
+          <option value="done">Done</option>
+          <option value="need-help">Need Help</option>
+          <option value="hold">Hold</option>
+          <option value="future">Future</option>
+        </select>
+      </div>
+
+      <div class="modal-actions">
+        <button class="btn btn-delete" id="deleteBtn" style="display:none;" onclick="deleteTask()">Delete</button>
+        <button class="btn btn-cancel" onclick="closeModal()">Cancel</button>
+        <button class="btn btn-save" onclick="saveTask()">Save Task</button>
       </div>
     </div>
   </div>
 
-  <!-- Add User Modal -->
-  <div id="userModal" class="modal-overlay">
-    <div class="modal">
-      <div class="modal-header">
-        <h2>Add New Employee</h2>
-        <button class="modal-close">&times;</button>
-      </div>
+  <script>
+    // ===== STATE =====
+    const STATUSES = [
+      { key: 'todo', label: 'To Do' },
+      { key: 'in-progress', label: 'In Progress' },
+      { key: 'done', label: 'Done' },
+      { key: 'need-help', label: 'Need Help' },
+      { key: 'hold', label: 'Hold' },
+      { key: 'future', label: 'Future' }
+    ];
 
-      <div class="modal-content">
-        <div class="modal-section">
-          <label>Employee Name</label>
-          <input type="text" id="newUserName" class="modal-input" placeholder="Full name">
+    let tasks = [];
+    let editingId = null;
+
+    // ===== INIT =====
+    function init() {
+      const saved = localStorage.getItem('teamtasks_data');
+      if (saved) {
+        tasks = JSON.parse(saved);
+      } else {
+        // Starter demo tasks
+        tasks = [
+          { id: 1, name: 'Design Dashboard UI', desc: 'Create modern mockups', assigned: 'John', tagged: ['Sarah'], deadline: '2026-08-28', urgency: 'high', status: 'in-progress', createdBy: 'Manager Admin' },
+          { id: 2, name: 'Setup Database', desc: 'Configure data storage', assigned: 'Alex', tagged: [], deadline: '2026-08-25', urgency: 'high', status: 'todo', createdBy: 'Manager Admin' },
+          { id: 3, name: 'Write Documentation', desc: 'User guide for the team', assigned: 'Sarah', tagged: [], deadline: '2026-09-05', urgency: 'low', status: 'future', createdBy: 'Manager Admin' },
+          { id: 4, name: 'Review Q3 Reports', desc: 'Quarterly review', assigned: 'Manager Admin', tagged: ['John', 'Alex'], deadline: '2026-08-24', urgency: 'medium', status: 'need-help', createdBy: 'Manager Admin' }
+        ];
+        persist();
+      }
+      render();
+    }
+
+    function persist() {
+      localStorage.setItem('teamtasks_data', JSON.stringify(tasks));
+    }
+
+    // ===== RENDER =====
+    function render() {
+      renderStats();
+      renderBoard();
+    }
+
+    function renderStats() {
+      const total = tasks.length;
+      const done = tasks.filter(t => t.status === 'done').length;
+      const inProgress = tasks.filter(t => t.status === 'in-progress').length;
+      const needHelp = tasks.filter(t => t.status === 'need-help').length;
+      const overdue = tasks.filter(t => t.deadline && t.deadline < today() && t.status !== 'done').length;
+
+      document.getElementById('statsBar').innerHTML = `
+        <div class="stat-card"><div class="stat-number">${total}</div><div class="stat-label">Total Tasks</div></div>
+        <div class="stat-card"><div class="stat-number">${inProgress}</div><div class="stat-label">In Progress</div></div>
+        <div class="stat-card"><div class="stat-number">${done}</div><div class="stat-label">Completed</div></div>
+        <div class="stat-card"><div class="stat-number">${needHelp}</div><div class="stat-label">Need Help</div></div>
+        <div class="stat-card"><div class="stat-number" style="color:${overdue > 0 ? '#dc3545' : '#28a745'}">${overdue}</div><div class="stat-label">Overdue</div></div>
+      `;
+    }
+
+    function renderBoard() {
+      const board = document.getElementById('board');
+      board.innerHTML = '';
+
+      STATUSES.forEach(s => {
+        const colTasks = tasks.filter(t => t.status === s.key);
+        const col = document.createElement('div');
+        col.className = 'column';
+        col.dataset.status = s.key;
+
+        col.innerHTML = `
+          <div class="column-header">
+            <span>${s.label}</span>
+            <span class="column-count">${colTasks.length}</span>
+          </div>
+          <div class="column-body" data-status="${s.key}">
+            ${colTasks.length === 0 ? '<div class="empty-hint">Drop tasks here</div>' : ''}
+          </div>
+        `;
+
+        const body = col.querySelector('.column-body');
+        colTasks.forEach(t => body.appendChild(makeCard(t)));
+
+        // Drag & drop targets
+        col.addEventListener('dragover', e => { e.preventDefault(); col.classList.add('drag-over'); });
+        col.addEventListener('dragleave', () => col.classList.remove('drag-over'));
+        col.addEventListener('drop', e => {
+          e.preventDefault();
+          col.classList.remove('drag-over');
+          const id = parseInt(e.dataTransfer.getData('text/plain'));
+          const task = tasks.find(t => t.id === id);
+          if (task && task.status !== s.key) {
+            task.status = s.key;
+            persist();
+            render();
+          }
+        });
+
+        board.appendChild(col);
+      });
+    }
+
+    function makeCard(task) {
+      const card = document.createElement('div');
+      card.className = `task-card urgency-${task.urgency}`;
+      card.draggable = true;
+
+      const isOverdue = task.deadline && task.deadline < today() && task.status !== 'done';
+      const taggedHtml = task.tagged && task.tagged.length
+        ? `<span>🏷️ ${task.tagged.join(', ')}</span>` : '';
+
+      card.innerHTML = `
+        <div class="card-urgency"></div>
+        <div class="card-content">
+          <div class="card-title">${esc(task.name)}</div>
+          <div class="card-meta">
+            <span>👤 ${esc(task.assigned)}</span>
+            ${task.deadline ? `<span class="card-deadline ${isOverdue ? 'overdue' : ''}">📅 ${task.deadline}${isOverdue ? ' ⚠️ Overdue' : ''}</span>` : ''}
+            ${taggedHtml}
+          </div>
+          <div class="card-creator">Created by ${esc(task.createdBy)}</div>
         </div>
+      `;
 
-        <div class="modal-section">
-          <label>Username</label>
-          <input type="text" id="newUsername" class="modal-input" placeholder="Username">
-        </div>
+      card.addEventListener('dragstart', e => {
+        e.dataTransfer.setData('text/plain', task.id);
+        card.classList.add('dragging');
+      });
+      card.addEventListener('dragend', () => card.classList.remove('dragging'));
+      card.addEventListener('click', () => openEditModal(task.id));
 
-        <div class="modal-section">
-          <label>Role</label>
-          <select id="newUserRole" class="modal-select">
-            <option value="employee">Employee</option>
-            <option value="manager">Manager</option>
-          </select>
-        </div>
+      return card;
+    }
 
-        <div id="tempPasswordDisplay" class="modal-section" style="display: none;">
-          <label>Temporary Password (Share with user)</label>
-          <input type="text" id="tempPassword" class="modal-input" disabled>
-        </div>
-      </div>
+    // ===== MODAL =====
+    function openAddModal() {
+      editingId = null;
+      document.getElementById('modalTitle').textContent = 'New Task';
+      document.getElementById('createdByInfo').style.display = 'none';
+      document.getElementById('deleteBtn').style.display = 'none';
+      document.getElementById('fName').value = '';
+      document.getElementById('fDesc').value = '';
+      document.getElementById('fAssigned').value = 'Manager Admin';
+      clearMultiSelect('fTagged');
+      document.getElementById('fDeadline').value = '';
+      document.getElementById('fUrgency').value = 'medium';
+      document.getElementById('fStatus').value = 'todo';
+      document.getElementById('taskModal').classList.add('show');
+    }
 
-      <div class="modal-buttons">
-        <button id="createUserBtn" class="btn-primary">Create Employee</button>
-        <button id="cancelUserBtn" class="btn-secondary">Cancel</button>
-      </div>
-    </div>
-  </div>
+    function openEditModal(id) {
+      const task = tasks.find(t => t.id === id);
+      if (!task) return;
+      editingId = id;
+      document.getElementById('modalTitle').textContent = 'Edit Task';
+      const info = document.getElementById('createdByInfo');
+      info.style.display = 'block';
+      info.textContent = `Created by: ${task.createdBy}`;
+      document.getElementById('deleteBtn').style.display = 'inline-block';
+      document.getElementById('fName').value = task.name;
+      document.getElementById('fDesc').value = task.desc || '';
+      document.getElementById('fAssigned').value = task.assigned;
+      setMultiSelect('fTagged', task.tagged || []);
+      document.getElementById('fDeadline').value = task.deadline || '';
+      document.getElementById('fUrgency').value = task.urgency;
+      document.getElementById('fStatus').value = task.status;
+      document.getElementById('taskModal').classList.add('show');
+    }
 
-  <script src="app-simple.js"></script>
+    function closeModal() {
+      document.getElementById('taskModal').classList.remove('show');
+      editingId = null;
+    }
+
+    function saveTask() {
+      const name = document.getElementById('fName').value.trim();
+      if (!name) { alert('Please enter a task name'); return; }
+
+      const data = {
+        name,
+        desc: document.getElementById('fDesc').value.trim(),
+        assigned: document.getElementById('fAssigned').value,
+        tagged: getMultiSelect('fTagged'),
+        deadline: document.getElementById('fDeadline').value,
+        urgency: document.getElementById('fUrgency').value,
+        status: document.getElementById('fStatus').value
+      };
+
+      if (editingId) {
+        const task = tasks.find(t => t.id === editingId);
+        Object.assign(task, data);
+      } else {
+        tasks.push({ id: Date.now(), createdBy: 'Manager Admin', ...data });
+      }
+
+      persist();
+      render();
+      closeModal();
+    }
+
+    function deleteTask() {
+      if (!editingId) return;
+      if (!confirm('Delete this task?')) return;
+      tasks = tasks.filter(t => t.id !== editingId);
+      persist();
+      render();
+      closeModal();
+    }
+
+    // ===== HELPERS =====
+    function today() {
+      return new Date().toISOString().split('T')[0];
+    }
+
+    function esc(s) {
+      const d = document.createElement('div');
+      d.textContent = s || '';
+      return d.innerHTML;
+    }
+
+    function getMultiSelect(id) {
+      return Array.from(document.getElementById(id).selectedOptions).map(o => o.value);
+    }
+
+    function setMultiSelect(id, values) {
+      Array.from(document.getElementById(id).options).forEach(o => {
+        o.selected = values.includes(o.value);
+      });
+    }
+
+    function clearMultiSelect(id) {
+      Array.from(document.getElementById(id).options).forEach(o => o.selected = false);
+    }
+
+    // Close modal on overlay click
+    document.getElementById('taskModal').addEventListener('click', e => {
+      if (e.target.id === 'taskModal') closeModal();
+    });
+
+    // Close on Escape
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape') closeModal();
+    });
+
+    init();
+  </script>
 </body>
 </html>
