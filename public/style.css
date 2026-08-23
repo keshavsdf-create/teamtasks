@@ -30,7 +30,7 @@ body {
 
 /* ============== LOGIN ============== */
 .login-container {
-  display: flex;
+  display: none !important;
   align-items: center;
   justify-content: center;
   min-height: 100vh;

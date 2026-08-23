@@ -10,19 +10,12 @@ let allUsers = [
 
 // ===== INITIALIZATION =====
 document.addEventListener('DOMContentLoaded', () => {
-  checkLogin();
+  // Auto-login as manager
+  currentUser = { id: 1, username: 'manager', name: 'Manager Admin', role: 'manager' };
+  localStorage.setItem('user', JSON.stringify(currentUser));
+  showDashboard();
   setupEventListeners();
 });
-
-function checkLogin() {
-  const user = localStorage.getItem('user');
-  if (user) {
-    currentUser = JSON.parse(user);
-    showDashboard();
-  } else {
-    showLogin();
-  }
-}
 
 function setupEventListeners() {
   // Login
