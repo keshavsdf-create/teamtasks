@@ -685,6 +685,8 @@
 
     .task-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
     .task-card.dragging { opacity: 0.5; }
+    .task-card[draggable="false"] { cursor: default; }
+    .task-card[draggable="false"]:hover { transform: none; }
 
     .card-title {
       font-weight: 700;
@@ -837,14 +839,30 @@
 
     .approval-section {
       display: none;
-      background: #FEFAEC;
-      border: 1.5px solid #F3E2A6;
       border-radius: 14px;
       padding: 16px;
       margin-bottom: 18px;
+      border: 1.5px solid;
+      transition: all 0.3s ease;
     }
 
     .approval-section.show { display: block; }
+
+    /* Approval status colors */
+    .approval-section.pending-status {
+      background: #FFFBF0;
+      border-color: #FDD835;
+    }
+
+    .approval-section.approved-status {
+      background: #F0FDF4;
+      border-color: #22C55E;
+    }
+
+    .approval-section.rejected-status {
+      background: #FEF2F2;
+      border-color: #EF4444;
+    }
 
     .approval-status-line { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; font-size: 13px; font-weight: 700; color: var(--navy); }
     .status-dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
@@ -1821,7 +1839,8 @@
       const card = document.createElement('div');
       card.className = 'task-card';
       card.style.borderLeftColor = STATUS_COLOR[task.status] || '#64748B';
-      card.draggable = true;
+      // Prevent approval cards from being dragged
+      card.draggable = task.status !== 'approval';
 
       const isOverdue = task.deadline && task.deadline < today() && task.status !== 'done';
       const taggedHtml = task.tagged && task.tagged.length
@@ -1997,8 +2016,14 @@
     function updateApprovalUI() {
       const dot = document.getElementById('approvalDot');
       const text = document.getElementById('approvalStatusText');
+      const section = document.getElementById('approvalSection');
+      
       dot.className = `status-dot ${tempApproval}`;
       text.textContent = tempApproval.charAt(0).toUpperCase() + tempApproval.slice(1);
+      
+      // Update section background color based on approval status
+      section.classList.remove('pending-status', 'approved-status', 'rejected-status');
+      section.classList.add(`${tempApproval}-status`);
     }
 
     function renderVoiceSlots() {
