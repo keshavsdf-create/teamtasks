@@ -178,9 +178,9 @@
     }
 
     .column.column-collapsed {
-      flex: 0 0 44px;
-      min-width: 44px;
-      width: 44px;
+      flex: 0 0 116px;
+      min-width: 116px;
+      width: 116px;
     }
 
     .column-header {
@@ -196,18 +196,21 @@
     }
 
     .column.column-collapsed .column-header {
-      writing-mode: vertical-rl;
-      transform: rotate(180deg);
-      justify-content: flex-start;
+      writing-mode: horizontal-tb;
+      transform: none;
+      flex-direction: row;
+      justify-content: space-between;
       align-items: center;
-      gap: 6px;
-      height: 100%;
-      min-height: 160px;
-      border-bottom: none;
-      border-left: 1px solid var(--ink);
-      padding: 10px 0 10px 6px;
-      margin-bottom: 0;
+      height: auto;
+      min-height: auto;
+      border-bottom: 3px solid var(--ink);
+      border-left: none;
+      padding: 6px 8px;
+      margin-bottom: 12px;
       font-size: 12px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
 
     .column-count {
