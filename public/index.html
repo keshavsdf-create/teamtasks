@@ -48,53 +48,116 @@
     .login-screen {
       min-height: 100vh;
       display: flex;
+    }
+
+    .login-left {
+      flex: 1 1 50%;
+      background-image: url('assets/login-left-panel.png');
+      background-size: cover;
+      background-position: center;
+      min-height: 100vh;
+    }
+
+    .login-right {
+      flex: 1 1 50%;
+      background: #FFFFFF;
+      display: flex;
       align-items: center;
       justify-content: center;
       padding: 20px;
-      position: relative;
-      background-image:
-        linear-gradient(180deg, rgba(234,242,251,0.88) 0%, rgba(234,242,251,0.92) 100%),
-        url('assets/bg-pattern.png');
-      background-size: cover;
-      background-position: center;
+      min-height: 100vh;
     }
 
     .login-card {
       position: relative;
       z-index: 1;
-      background: var(--card-bg);
-      border-radius: 20px;
+      background: rgba(240, 244, 249, 0.6);
+      backdrop-filter: blur(14px);
+      border: 1px solid rgba(255,255,255,0.6);
+      border-radius: 24px;
       box-shadow: var(--shadow-lg);
-      padding: 36px 32px;
+      padding: 40px 36px;
       width: 100%;
-      max-width: 360px;
+      max-width: 400px;
     }
 
-    .login-logo {
-      display: block;
-      width: 64px;
-      height: 64px;
-      border-radius: 16px;
-      object-fit: cover;
-      margin: 0 auto 14px;
-      box-shadow: var(--shadow-sm);
-    }
+    .login-logo { display: none; }
 
     .login-title {
-      font-size: 26px;
+      font-size: 30px;
       font-weight: 800;
       color: var(--navy);
-      text-align: center;
+      text-align: left;
       letter-spacing: -0.5px;
-      margin-bottom: 4px;
+      margin-bottom: 28px;
     }
 
-    .login-subtitle {
-      font-size: 13px;
-      color: var(--label-gray);
-      text-align: center;
-      margin-bottom: 24px;
+    .login-subtitle { display: none; }
+
+    .login-field {
+      width: 100%;
+      padding: 15px 18px;
+      border: 1.5px solid #C7D2E0;
+      border-radius: 12px;
+      font-size: 16px;
+      font-family: var(--sans);
+      background: rgba(255,255,255,0.5);
+      color: var(--navy);
+      margin-bottom: 18px;
     }
+
+    .login-field:focus {
+      outline: none;
+      border-color: var(--teal);
+      background: white;
+    }
+
+    .login-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 22px;
+      font-size: 13px;
+    }
+
+    .login-remember {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--navy);
+      font-weight: 600;
+    }
+
+    .login-remember input { width: 16px; height: 16px; accent-color: var(--teal); cursor: pointer; }
+
+    .login-forgot {
+      color: var(--teal-dark);
+      font-weight: 700;
+      cursor: pointer;
+      background: none;
+      border: none;
+      font-size: 13px;
+      font-family: var(--sans);
+    }
+
+    .login-forgot:hover { text-decoration: underline; }
+
+    .login-submit {
+      width: 100%;
+      background: var(--teal);
+      color: white;
+      border: none;
+      border-radius: 999px;
+      padding: 16px;
+      font-size: 16px;
+      font-weight: 800;
+      cursor: pointer;
+      font-family: var(--sans);
+      box-shadow: 0 8px 20px rgba(20,184,198,0.35);
+      transition: background 0.15s ease;
+    }
+
+    .login-submit:hover { background: var(--teal-dark); }
 
     .login-error {
       display: none;
@@ -854,28 +917,32 @@
       .app { padding: 14px; }
       .header { padding: 16px 18px; border-radius: 16px; }
       .header h1 { font-size: 22px; }
+      .login-screen { flex-direction: column; }
+      .login-left { flex: 0 0 220px; min-height: 220px; }
+      .login-right { min-height: auto; padding: 24px 16px; }
     }
   </style>
 </head>
 <body>
 
   <div class="login-screen" id="loginScreen">
+    <div class="login-left"></div>
+    <div class="login-right">
     <div class="login-card">
-      <img src="assets/favicon.png" alt="TeamTasks logo" class="login-logo">
-      <h1 class="login-title">TeamTasks</h1>
-      <p class="login-subtitle">Sign in to your dashboard</p>
-      <div class="form-group">
-        <label>Login ID</label>
-        <input type="text" id="loginUsername" placeholder="e.g. john" autocomplete="username">
-      </div>
-      <div class="form-group">
-        <label>Password</label>
-        <input type="password" id="loginPassword" placeholder="••••" autocomplete="current-password">
+      <h1 class="login-title">Welcome Back</h1>
+      <input type="text" id="loginUsername" class="login-field" placeholder="Email" autocomplete="username">
+      <input type="password" id="loginPassword" class="login-field" placeholder="Password" autocomplete="current-password">
+      <div class="login-row">
+        <label class="login-remember">
+          <input type="checkbox" id="loginRemember">
+          Remember me
+        </label>
+        <button type="button" class="login-forgot" onclick="toggleLoginHint()">Forgot Password?</button>
       </div>
       <div id="loginError" class="login-error"></div>
-      <button class="btn btn-primary" style="width:100%;justify-content:center;" onclick="handleLoginSubmit()">Log In</button>
-      <div class="login-hint-toggle" onclick="toggleLoginHint()">Forgot your login ID?</div>
+      <button class="login-submit" onclick="handleLoginSubmit()">Sign In</button>
       <div class="login-hint" id="loginHint"></div>
+    </div>
     </div>
   </div>
 
@@ -1197,7 +1264,10 @@
       currentUser = null;
       document.getElementById('loginScreen').style.display = 'flex';
       document.getElementById('appRoot').style.display = 'none';
-      document.getElementById('loginUsername').value = '';
+
+      const remembered = localStorage.getItem('teamtasks_remembered_id');
+      document.getElementById('loginUsername').value = remembered || '';
+      document.getElementById('loginRemember').checked = !!remembered;
       document.getElementById('loginPassword').value = '';
       document.getElementById('loginError').classList.remove('show');
       document.getElementById('loginHint').classList.remove('show');
@@ -1232,6 +1302,12 @@
         errEl.textContent = 'Incorrect ID or password.';
         errEl.classList.add('show');
         return;
+      }
+
+      if (document.getElementById('loginRemember').checked) {
+        localStorage.setItem('teamtasks_remembered_id', emp.username);
+      } else {
+        localStorage.removeItem('teamtasks_remembered_id');
       }
 
       currentUser = emp;
