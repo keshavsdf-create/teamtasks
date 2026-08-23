@@ -74,7 +74,151 @@
       font-weight: 700;
       font-size: 13px;
       flex-shrink: 0;
+      cursor: pointer;
     }
+
+    .team-trigger-wrap { position: relative; }
+
+    .team-trigger {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: #F1F5F9;
+      border: none;
+      border-radius: 999px;
+      padding: 6px 12px 6px 6px;
+      cursor: pointer;
+      font-family: var(--sans);
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--navy);
+    }
+
+    .team-trigger:hover { background: #E4ECF7; }
+    .team-trigger .chev { color: var(--label-gray); font-size: 10px; }
+
+    .team-dropdown {
+      display: none;
+      position: absolute;
+      top: 52px;
+      right: 0;
+      width: 320px;
+      background: var(--card-bg);
+      border-radius: 16px;
+      box-shadow: var(--shadow-lg);
+      padding: 14px;
+      z-index: 150;
+    }
+
+    .team-dropdown.show { display: block; }
+
+    .team-dropdown-title {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--label-gray);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      padding: 4px 6px 10px;
+    }
+
+    .employee-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 6px;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: background 0.12s ease;
+    }
+
+    .employee-row:hover { background: #F1F8FA; }
+
+    .employee-row-name { font-size: 13px; font-weight: 700; color: var(--navy); }
+    .employee-row-role { font-size: 11px; color: var(--label-gray); }
+    .employee-row-count {
+      margin-left: auto;
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--teal-dark);
+      background: #E5F8FA;
+      padding: 2px 8px;
+      border-radius: 999px;
+    }
+
+    .team-dropdown-divider { height: 1px; background: var(--border-soft); margin: 10px 0; }
+
+    .add-employee-form { display: flex; flex-direction: column; gap: 8px; padding: 4px 6px 2px; }
+
+    .add-employee-form input,
+    .add-employee-form select {
+      width: 100%;
+      padding: 9px 12px;
+      border: 1.5px solid var(--border-soft);
+      border-radius: 10px;
+      font-size: 13px;
+      font-family: var(--sans);
+      background: #F8FBFE;
+      color: var(--navy);
+    }
+
+    .add-employee-form input:focus,
+    .add-employee-form select:focus { outline: none; border-color: var(--teal); background: white; }
+
+    .add-employee-btn {
+      background: var(--teal);
+      color: white;
+      border: none;
+      border-radius: 10px;
+      padding: 9px;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      font-family: var(--sans);
+    }
+
+    .add-employee-btn:hover { background: var(--teal-dark); }
+
+    /* ===== EMPLOYEE PROFILE MODAL ===== */
+    .profile-header { display: flex; align-items: center; gap: 14px; margin-bottom: 20px; }
+    .profile-header .avatar-circle { width: 52px; height: 52px; font-size: 17px; cursor: default; }
+    .profile-name { font-size: 19px; font-weight: 800; color: var(--navy); }
+    .profile-role { font-size: 12px; color: var(--label-gray); }
+
+    .profile-stats {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    .profile-stat {
+      background: #F8FBFE;
+      border: 1px solid var(--border-soft);
+      border-radius: 12px;
+      padding: 12px;
+      text-align: center;
+    }
+
+    .profile-stat-num { font-size: 20px; font-weight: 800; color: var(--navy); }
+    .profile-stat-label { font-size: 10px; color: var(--label-gray); text-transform: uppercase; letter-spacing: 0.4px; margin-top: 2px; }
+
+    .profile-task-list { display: flex; flex-direction: column; gap: 8px; }
+
+    .profile-task-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      background: #F8FBFE;
+      border: 1px solid var(--border-soft);
+      border-radius: 10px;
+      cursor: pointer;
+    }
+
+    .profile-task-row:hover { border-color: var(--teal); }
+    .profile-task-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+    .profile-task-name { flex: 1; font-size: 13px; font-weight: 600; color: var(--navy); }
+    .profile-task-status { font-size: 10px; color: var(--label-gray); text-transform: uppercase; }
 
     .btn {
       border: none;
@@ -499,7 +643,26 @@
       <h1>TeamTasks</h1>
       <div class="header-right">
         <button class="btn btn-primary" onclick="openAddModal()">+ New Task</button>
-        <div class="avatar-circle" id="headerAvatar" style="background:#6366F1;">MA</div>
+        <div class="team-trigger-wrap">
+          <button class="team-trigger" onclick="toggleTeamDropdown(event)">
+            <div class="avatar-circle" id="headerAvatar" style="width:28px;height:28px;font-size:11px;background:#6366F1;">MA</div>
+            Team <span class="chev">▾</span>
+          </button>
+          <div class="team-dropdown" id="teamDropdown">
+            <div class="team-dropdown-title">Your Team</div>
+            <div id="employeeList"></div>
+            <div class="team-dropdown-divider"></div>
+            <div class="team-dropdown-title">Add Employee</div>
+            <div class="add-employee-form">
+              <input type="text" id="newEmpName" placeholder="Full name">
+              <select id="newEmpRole">
+                <option value="Employee">Employee</option>
+                <option value="Manager">Manager</option>
+              </select>
+              <button class="add-employee-btn" onclick="addEmployee()">+ Add Employee</button>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -507,6 +670,24 @@
 
     <div class="board" id="board"></div>
 
+  </div>
+
+  <div class="modal-overlay" id="employeeModal">
+    <div class="modal" style="max-width:460px;">
+      <div class="profile-header">
+        <div class="avatar-circle" id="profileAvatar" style="background:#6366F1;">?</div>
+        <div>
+          <div class="profile-name" id="profileName">Name</div>
+          <div class="profile-role" id="profileRole">Role</div>
+        </div>
+      </div>
+      <div class="profile-stats" id="profileStats"></div>
+      <div class="team-dropdown-title" style="padding-left:0;">Their Tasks</div>
+      <div class="profile-task-list" id="profileTaskList"></div>
+      <div class="modal-actions">
+        <button class="btn btn-cancel" onclick="closeEmployeeModal()">Close</button>
+      </div>
+    </div>
   </div>
 
   <div class="modal-overlay" id="taskModal">
@@ -526,22 +707,12 @@
 
       <div class="form-group">
         <label>Assigned To</label>
-        <select id="fAssigned">
-          <option value="Manager Admin">Manager Admin</option>
-          <option value="John">John</option>
-          <option value="Sarah">Sarah</option>
-          <option value="Alex">Alex</option>
-        </select>
+        <select id="fAssigned"></select>
       </div>
 
       <div class="form-group">
         <label>Tag for Help (optional)</label>
-        <select id="fTagged" multiple size="4">
-          <option value="Manager Admin">Manager Admin</option>
-          <option value="John">John</option>
-          <option value="Sarah">Sarah</option>
-          <option value="Alex">Alex</option>
-        </select>
+        <select id="fTagged" multiple size="4"></select>
       </div>
 
       <div class="form-group">
@@ -637,6 +808,7 @@
 
     let tasks = [];
     let editingId = null;
+    let employees = [];
 
     let tempVoiceNotes = [null, null];
     let tempAttachments = [];
@@ -659,8 +831,24 @@
         ];
         persist();
       }
+
+      const savedEmp = localStorage.getItem('teamtasks_employees');
+      if (savedEmp) {
+        employees = JSON.parse(savedEmp);
+      } else {
+        employees = [
+          { id: 1, name: 'Manager Admin', role: 'Manager' },
+          { id: 2, name: 'John', role: 'Employee' },
+          { id: 3, name: 'Sarah', role: 'Employee' },
+          { id: 4, name: 'Alex', role: 'Employee' }
+        ];
+        persistEmployees();
+      }
+
       const codes = tasks.map(t => t.code).filter(Boolean).map(c => parseInt(c.replace('T-', ''), 10)).filter(n => !isNaN(n));
       taskCounter = codes.length ? Math.max(...codes) : 100;
+      renderAssignOptions();
+      renderEmployeeList();
       render();
     }
 
@@ -668,9 +856,14 @@
       localStorage.setItem('teamtasks_data', JSON.stringify(tasks));
     }
 
+    function persistEmployees() {
+      localStorage.setItem('teamtasks_employees', JSON.stringify(employees));
+    }
+
     function render() {
       renderStats();
       renderBoard();
+      renderEmployeeList();
     }
 
     function initials(name) {
@@ -688,6 +881,124 @@
       const d = new Date(iso + 'T00:00:00');
       return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
     }
+
+    // ===== TEAM DROPDOWN =====
+    function toggleTeamDropdown(e) {
+      e.stopPropagation();
+      document.getElementById('teamDropdown').classList.toggle('show');
+    }
+
+    document.addEventListener('click', e => {
+      const dd = document.getElementById('teamDropdown');
+      const wrap = document.querySelector('.team-trigger-wrap');
+      if (dd && dd.classList.contains('show') && wrap && !wrap.contains(e.target)) {
+        dd.classList.remove('show');
+      }
+    });
+
+    function renderEmployeeList() {
+      const list = document.getElementById('employeeList');
+      if (!list) return;
+      const others = employees.filter(e => e.role !== 'Manager');
+
+      list.innerHTML = others.map(emp => {
+        const count = tasks.filter(t => t.assigned === emp.name).length;
+        return `
+          <div class="employee-row" onclick="openEmployeeProfile(${emp.id})">
+            <div class="avatar-circle" style="width:32px;height:32px;font-size:11px;background:${avatarColor(emp.name)}">${initials(emp.name)}</div>
+            <div>
+              <div class="employee-row-name">${esc(emp.name)}</div>
+              <div class="employee-row-role">${esc(emp.role)}</div>
+            </div>
+            <div class="employee-row-count">${count} task${count === 1 ? '' : 's'}</div>
+          </div>
+        `;
+      }).join('') || '<div style="font-size:12px;color:var(--label-gray);padding:8px 6px;">No employees yet.</div>';
+    }
+
+    function addEmployee() {
+      const nameInput = document.getElementById('newEmpName');
+      const roleSelect = document.getElementById('newEmpRole');
+      const name = nameInput.value.trim();
+      if (!name) { alert('Please enter a name'); return; }
+      if (employees.some(e => e.name.toLowerCase() === name.toLowerCase())) {
+        alert('An employee with that name already exists');
+        return;
+      }
+
+      employees.push({ id: Date.now(), name, role: roleSelect.value });
+      persistEmployees();
+      nameInput.value = '';
+      roleSelect.value = 'Employee';
+
+      renderEmployeeList();
+      renderAssignOptions();
+    }
+
+    function renderAssignOptions() {
+      const names = employees.map(e => e.name);
+      const optsHtml = names.map(n => `<option value="${esc(n)}">${esc(n)}</option>`).join('');
+
+      const assignedSelect = document.getElementById('fAssigned');
+      const taggedSelect = document.getElementById('fTagged');
+      if (assignedSelect) {
+        const prevValue = assignedSelect.value;
+        assignedSelect.innerHTML = optsHtml;
+        if (names.includes(prevValue)) assignedSelect.value = prevValue;
+      }
+      if (taggedSelect) {
+        const prevSelected = getMultiSelect('fTagged');
+        taggedSelect.innerHTML = optsHtml;
+        setMultiSelect('fTagged', prevSelected);
+      }
+    }
+
+    // ===== EMPLOYEE PROFILE =====
+    function openEmployeeProfile(empId) {
+      const emp = employees.find(e => e.id === empId);
+      if (!emp) return;
+
+      document.getElementById('teamDropdown').classList.remove('show');
+
+      document.getElementById('profileAvatar').textContent = initials(emp.name);
+      document.getElementById('profileAvatar').style.background = avatarColor(emp.name);
+      document.getElementById('profileName').textContent = emp.name;
+      document.getElementById('profileRole').textContent = emp.role;
+
+      const empTasks = tasks.filter(t => t.assigned === emp.name);
+      const done = empTasks.filter(t => t.status === 'done').length;
+      const active = empTasks.filter(t => t.status !== 'done').length;
+      const overdue = empTasks.filter(t => t.deadline && t.deadline < today() && t.status !== 'done').length;
+
+      document.getElementById('profileStats').innerHTML = `
+        <div class="profile-stat"><div class="profile-stat-num">${empTasks.length}</div><div class="profile-stat-label">Total</div></div>
+        <div class="profile-stat"><div class="profile-stat-num">${active}</div><div class="profile-stat-label">Active</div></div>
+        <div class="profile-stat"><div class="profile-stat-num">${done}</div><div class="profile-stat-label">Done</div></div>
+      `;
+
+      const listEl = document.getElementById('profileTaskList');
+      if (empTasks.length === 0) {
+        listEl.innerHTML = '<div style="font-size:12px;color:var(--label-gray);">No tasks assigned yet.</div>';
+      } else {
+        listEl.innerHTML = empTasks.map(t => {
+          const statusInfo = STATUSES.find(s => s.key === t.status);
+          return `
+            <div class="profile-task-row" onclick="closeEmployeeModal(); openEditModal(${t.id});">
+              <span class="profile-task-dot" style="background:${statusInfo ? statusInfo.color : '#64748B'}"></span>
+              <span class="profile-task-name">${esc(t.name)}</span>
+              <span class="profile-task-status">${statusInfo ? statusInfo.label : t.status}</span>
+            </div>
+          `;
+        }).join('');
+      }
+
+      document.getElementById('employeeModal').classList.add('show');
+    }
+
+    function closeEmployeeModal() {
+      document.getElementById('employeeModal').classList.remove('show');
+    }
+
 
     function renderStats() {
       const total = tasks.length;
@@ -1118,8 +1429,12 @@
       if (e.target.id === 'taskModal') closeModal();
     });
 
+    document.getElementById('employeeModal').addEventListener('click', e => {
+      if (e.target.id === 'employeeModal') closeEmployeeModal();
+    });
+
     document.addEventListener('keydown', e => {
-      if (e.key === 'Escape') closeModal();
+      if (e.key === 'Escape') { closeModal(); closeEmployeeModal(); }
     });
 
     init();
