@@ -200,6 +200,99 @@
     .profile-name { font-size: 19px; font-weight: 800; color: var(--navy); }
     .profile-role { font-size: 12px; color: var(--label-gray); }
 
+    .profile-avatar-wrap {
+      position: relative;
+      width: 52px; height: 52px;
+      flex-shrink: 0;
+      cursor: pointer;
+      border-radius: 50%;
+    }
+
+    .profile-avatar-wrap img,
+    .profile-avatar-wrap .avatar-circle {
+      width: 52px; height: 52px;
+      border-radius: 50%;
+      object-fit: cover;
+    }
+
+    .photo-overlay {
+      position: absolute;
+      inset: 0;
+      border-radius: 50%;
+      background: rgba(22,38,74,0.55);
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      opacity: 0;
+      transition: opacity 0.15s ease;
+    }
+
+    .profile-avatar-wrap:hover .photo-overlay { opacity: 1; }
+
+    .profile-edit-input {
+      width: 100%;
+      padding: 8px 10px;
+      border: 1.5px solid var(--border-soft);
+      border-radius: 8px;
+      font-size: 14px;
+      font-family: var(--sans);
+      font-weight: 700;
+      color: var(--navy);
+      background: #F8FBFE;
+    }
+
+    .profile-edit-input:focus { outline: none; border-color: var(--teal); background: white; }
+
+    select.profile-edit-input { font-weight: 500; font-size: 12px; color: var(--label-gray); }
+
+    .dash-columns {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      max-height: 55vh;
+      overflow-y: auto;
+      margin-bottom: 6px;
+    }
+
+    .dash-col-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--navy);
+      margin-bottom: 8px;
+    }
+
+    .dash-col-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+    .dash-col-count { color: var(--label-gray); font-weight: 500; font-size: 11px; }
+
+    .dash-empty {
+      font-size: 12px;
+      color: var(--label-gray);
+      font-style: italic;
+      padding: 6px 0 0 17px;
+    }
+
+    .dash-task-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 9px 12px;
+      background: #F8FBFE;
+      border: 1px solid var(--border-soft);
+      border-radius: 10px;
+      margin-bottom: 6px;
+      font-size: 13px;
+      color: var(--navy);
+      cursor: pointer;
+    }
+
+    .dash-task-row:hover { border-color: var(--teal); }
+    .dash-task-row .dash-task-date { margin-left: auto; font-size: 11px; color: var(--label-gray); }
+
     .profile-stats {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
@@ -691,17 +784,43 @@
   <div class="modal-overlay" id="employeeModal">
     <div class="modal" style="max-width:460px;">
       <div class="profile-header">
-        <div class="avatar-circle" id="profileAvatar" style="background:#6366F1;">?</div>
-        <div>
-          <div class="profile-name" id="profileName">Name</div>
-          <div class="profile-role" id="profileRole">Role</div>
+        <div class="profile-avatar-wrap" onclick="document.getElementById('photoInput').click()">
+          <div class="avatar-circle" id="profileAvatar" style="width:52px;height:52px;font-size:17px;background:#6366F1;">?</div>
+          <div class="photo-overlay">📷</div>
+        </div>
+        <input type="file" id="photoInput" accept="image/*" style="display:none" onchange="handlePhotoFile(this.files)">
+        <div style="flex:1;">
+          <input type="text" id="profileNameInput" class="profile-edit-input" placeholder="Full name">
+          <select id="profileRoleInput" class="profile-edit-input" style="margin-top:6px;">
+            <option value="Employee">Employee</option>
+            <option value="Manager">Manager</option>
+          </select>
         </div>
       </div>
       <div class="profile-stats" id="profileStats"></div>
       <div class="team-dropdown-title" style="padding-left:0;">Their Tasks</div>
       <div class="profile-task-list" id="profileTaskList"></div>
       <div class="modal-actions">
+        <button class="btn btn-delete" id="deleteEmpBtn" onclick="deleteEmployeeProfile()">Delete Profile</button>
+        <button class="btn btn-outline" onclick="openEmployeeDashboard()">View Dashboard</button>
         <button class="btn btn-cancel" onclick="closeEmployeeModal()">Close</button>
+        <button class="btn btn-save" onclick="saveEmployeeProfile()">Save Changes</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="dashboardModal">
+    <div class="modal" style="max-width:640px;">
+      <div class="profile-header">
+        <div class="avatar-circle" id="dashAvatar" style="width:44px;height:44px;font-size:15px;background:#6366F1;">?</div>
+        <div>
+          <div class="profile-name" id="dashName">Name</div>
+          <div class="profile-role">What they're working on — and not</div>
+        </div>
+      </div>
+      <div class="dash-columns" id="dashColumns"></div>
+      <div class="modal-actions">
+        <button class="btn btn-cancel" onclick="closeDashboardModal()">Close</button>
       </div>
     </div>
   </div>
@@ -709,6 +828,7 @@
   <div class="modal-overlay" id="taskModal">
     <div class="modal">
       <h2 id="modalTitle">New Task</h2>
+
       <div class="readonly-info" id="createdByInfo" style="display:none;"></div>
 
       <div class="form-group">
@@ -892,6 +1012,18 @@
       return AVATAR_COLORS[sum % AVATAR_COLORS.length];
     }
 
+    function getEmployee(name) {
+      return employees.find(e => e.name === name);
+    }
+
+    function avatarHTML(name, sizePx, fontPx) {
+      const emp = getEmployee(name);
+      if (emp && emp.photo) {
+        return `<img src="${emp.photo}" style="width:${sizePx}px;height:${sizePx}px;border-radius:50%;object-fit:cover;flex-shrink:0;">`;
+      }
+      return `<div class="avatar-circle" style="width:${sizePx}px;height:${sizePx}px;font-size:${fontPx}px;background:${avatarColor(name)}">${initials(name)}</div>`;
+    }
+
     function formatDate(iso) {
       if (!iso) return '';
       const d = new Date(iso + 'T00:00:00');
@@ -918,11 +1050,19 @@
       const managers = employees.filter(e => e.role === 'Manager');
       const others = employees.filter(e => e.role !== 'Manager');
 
+      const me = managers[0];
+      const headerAv = document.getElementById('headerAvatar');
+      if (headerAv && me) {
+        headerAv.outerHTML = me.photo
+          ? `<img id="headerAvatar" src="${me.photo}" style="width:28px;height:28px;border-radius:50%;object-fit:cover;">`
+          : `<div id="headerAvatar" class="avatar-circle" style="width:28px;height:28px;font-size:11px;background:${avatarColor(me.name)}">${initials(me.name)}</div>`;
+      }
+
       const meHtml = managers.map(emp => {
         const count = tasks.filter(t => t.assigned === emp.name).length;
         return `
           <div class="employee-row employee-row-me" onclick="openEmployeeProfile(${emp.id})">
-            <div class="avatar-circle" style="width:32px;height:32px;font-size:11px;background:${avatarColor(emp.name)}">${initials(emp.name)}</div>
+            ${avatarHTML(emp.name, 32, 11)}
             <div>
               <div class="employee-row-name">${esc(emp.name)} <span class="me-tag">Me</span></div>
               <div class="employee-row-role">${esc(emp.role)}</div>
@@ -936,7 +1076,7 @@
         const count = tasks.filter(t => t.assigned === emp.name).length;
         return `
           <div class="employee-row" onclick="openEmployeeProfile(${emp.id})">
-            <div class="avatar-circle" style="width:32px;height:32px;font-size:11px;background:${avatarColor(emp.name)}">${initials(emp.name)}</div>
+            ${avatarHTML(emp.name, 32, 11)}
             <div>
               <div class="employee-row-name">${esc(emp.name)}</div>
               <div class="employee-row-role">${esc(emp.role)}</div>
@@ -987,21 +1127,25 @@
     }
 
     // ===== EMPLOYEE PROFILE =====
+    let editingEmployeeId = null;
+    let tempProfilePhoto = null;
+
     function openEmployeeProfile(empId) {
       const emp = employees.find(e => e.id === empId);
       if (!emp) return;
 
+      editingEmployeeId = empId;
+      tempProfilePhoto = emp.photo || null;
+
       document.getElementById('teamDropdown').classList.remove('show');
 
-      document.getElementById('profileAvatar').textContent = initials(emp.name);
-      document.getElementById('profileAvatar').style.background = avatarColor(emp.name);
-      document.getElementById('profileName').textContent = emp.name;
-      document.getElementById('profileRole').textContent = emp.role;
+      refreshProfileAvatar(emp);
+      document.getElementById('profileNameInput').value = emp.name;
+      document.getElementById('profileRoleInput').value = emp.role;
 
       const empTasks = tasks.filter(t => t.assigned === emp.name);
       const done = empTasks.filter(t => t.status === 'done').length;
       const active = empTasks.filter(t => t.status !== 'done').length;
-      const overdue = empTasks.filter(t => t.deadline && t.deadline < today() && t.status !== 'done').length;
 
       document.getElementById('profileStats').innerHTML = `
         <div class="profile-stat"><div class="profile-stat-num">${empTasks.length}</div><div class="profile-stat-label">Total</div></div>
@@ -1028,8 +1172,123 @@
       document.getElementById('employeeModal').classList.add('show');
     }
 
+    function refreshProfileAvatar(emp) {
+      const wrap = document.getElementById('profileAvatar');
+      const photo = tempProfilePhoto;
+      if (photo) {
+        wrap.outerHTML = `<img id="profileAvatar" src="${photo}" style="width:52px;height:52px;border-radius:50%;object-fit:cover;">`;
+      } else {
+        wrap.outerHTML = `<div id="profileAvatar" class="avatar-circle" style="width:52px;height:52px;font-size:17px;background:${avatarColor(emp.name)}">${initials(emp.name)}</div>`;
+      }
+    }
+
+    function handlePhotoFile(fileList) {
+      const file = fileList[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        tempProfilePhoto = reader.result;
+        const emp = employees.find(e => e.id === editingEmployeeId);
+        const el = document.getElementById('profileAvatar');
+        el.outerHTML = `<img id="profileAvatar" src="${tempProfilePhoto}" style="width:52px;height:52px;border-radius:50%;object-fit:cover;">`;
+      };
+      reader.readAsDataURL(file);
+      document.getElementById('photoInput').value = '';
+    }
+
+    function saveEmployeeProfile() {
+      const emp = employees.find(e => e.id === editingEmployeeId);
+      if (!emp) return;
+
+      const newName = document.getElementById('profileNameInput').value.trim();
+      if (!newName) { alert('Name cannot be empty'); return; }
+      const newRole = document.getElementById('profileRoleInput').value;
+
+      const oldName = emp.name;
+      if (oldName !== newName) {
+        tasks.forEach(t => {
+          if (t.assigned === oldName) t.assigned = newName;
+          if (t.tagged) t.tagged = t.tagged.map(n => n === oldName ? newName : n);
+          if (t.createdBy === oldName) t.createdBy = newName;
+        });
+        persist();
+      }
+
+      emp.name = newName;
+      emp.role = newRole;
+      emp.photo = tempProfilePhoto;
+      persistEmployees();
+
+      renderAssignOptions();
+      renderEmployeeList();
+      render();
+      closeEmployeeModal();
+    }
+
+    function deleteEmployeeProfile() {
+      const emp = employees.find(e => e.id === editingEmployeeId);
+      if (!emp) return;
+
+      const assignedCount = tasks.filter(t => t.assigned === emp.name).length;
+      const warning = assignedCount > 0
+        ? `${emp.name} has ${assignedCount} task(s) assigned. Their name will stay on those tasks, but they'll be removed from your team list. Continue?`
+        : `Delete ${emp.name}'s profile?`;
+      if (!confirm(warning)) return;
+
+      employees = employees.filter(e => e.id !== editingEmployeeId);
+      persistEmployees();
+      renderAssignOptions();
+      renderEmployeeList();
+      render();
+      closeEmployeeModal();
+    }
+
     function closeEmployeeModal() {
       document.getElementById('employeeModal').classList.remove('show');
+      editingEmployeeId = null;
+      tempProfilePhoto = null;
+    }
+
+    // ===== EMPLOYEE DASHBOARD (read-only, per person) =====
+    function openEmployeeDashboard() {
+      const emp = employees.find(e => e.id === editingEmployeeId);
+      if (!emp) return;
+
+      document.getElementById('dashAvatar').outerHTML = emp.photo
+        ? `<img id="dashAvatar" src="${emp.photo}" style="width:44px;height:44px;border-radius:50%;object-fit:cover;">`
+        : `<div id="dashAvatar" class="avatar-circle" style="width:44px;height:44px;font-size:15px;background:${avatarColor(emp.name)}">${initials(emp.name)}</div>`;
+      document.getElementById('dashName').textContent = emp.name;
+
+      const empTasks = tasks.filter(t => t.assigned === emp.name);
+      const container = document.getElementById('dashColumns');
+
+      container.innerHTML = STATUSES.map(s => {
+        const colTasks = empTasks.filter(t => t.status === s.key);
+        const rows = colTasks.length === 0
+          ? `<div class="dash-empty">Not currently working on anything here</div>`
+          : colTasks.map(t => `
+              <div class="dash-task-row" onclick="closeDashboardModal(); closeEmployeeModal(); openEditModal(${t.id});">
+                ${esc(t.name)}
+                <span class="dash-task-date">${t.deadline ? formatDate(t.deadline) : ''}</span>
+              </div>
+            `).join('');
+
+        return `
+          <div>
+            <div class="dash-col-header">
+              <span class="dash-col-dot" style="background:${s.color}"></span>
+              ${s.label} <span class="dash-col-count">(${colTasks.length})</span>
+            </div>
+            ${rows}
+          </div>
+        `;
+      }).join('');
+
+      document.getElementById('dashboardModal').classList.add('show');
+    }
+
+    function closeDashboardModal() {
+      document.getElementById('dashboardModal').classList.remove('show');
     }
 
 
@@ -1131,16 +1390,13 @@
       const approvalBadge = task.status === 'approval'
         ? `<span class="approval-badge ${task.approvalStatus || 'pending'}">${task.approvalStatus || 'pending'}</span>` : '';
 
-      const av = initials(task.assigned || '?');
-      const avColor = avatarColor(task.assigned || '?');
-
       card.innerHTML = `
         ${approvalBadge}
         <div class="card-title">${esc(task.name)}</div>
         <div class="card-code">${esc(task.code || '')}</div>
         <div class="card-row">
           <div class="card-date ${isOverdue ? 'overdue' : ''}">${ICONS.calendar} ${task.deadline ? formatDate(task.deadline) : 'No date'}</div>
-          <div class="avatar-circle" style="width:26px;height:26px;font-size:10px;background:${avColor}">${av}</div>
+          ${avatarHTML(task.assigned || '?', 26, 10)}
         </div>
         <div class="card-row" style="margin-bottom:0;">
           ${taggedHtml || '<span></span>'}
@@ -1466,8 +1722,12 @@
       if (e.target.id === 'employeeModal') closeEmployeeModal();
     });
 
+    document.getElementById('dashboardModal').addEventListener('click', e => {
+      if (e.target.id === 'dashboardModal') closeDashboardModal();
+    });
+
     document.addEventListener('keydown', e => {
-      if (e.key === 'Escape') { closeModal(); closeEmployeeModal(); }
+      if (e.key === 'Escape') { closeModal(); closeDashboardModal(); closeEmployeeModal(); }
     });
 
     init();
