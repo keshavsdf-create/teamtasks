@@ -145,6 +145,22 @@
       border-radius: 999px;
     }
 
+    .employee-row-me { background: #F1F8FA; }
+
+    .me-tag {
+      display: inline-block;
+      background: var(--teal);
+      color: white;
+      font-size: 9px;
+      font-weight: 700;
+      padding: 1px 6px;
+      border-radius: 999px;
+      margin-left: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+      vertical-align: middle;
+    }
+
     .team-dropdown-divider { height: 1px; background: var(--border-soft); margin: 10px 0; }
 
     .add-employee-form { display: flex; flex-direction: column; gap: 8px; padding: 4px 6px 2px; }
@@ -899,9 +915,24 @@
     function renderEmployeeList() {
       const list = document.getElementById('employeeList');
       if (!list) return;
+      const managers = employees.filter(e => e.role === 'Manager');
       const others = employees.filter(e => e.role !== 'Manager');
 
-      list.innerHTML = others.map(emp => {
+      const meHtml = managers.map(emp => {
+        const count = tasks.filter(t => t.assigned === emp.name).length;
+        return `
+          <div class="employee-row employee-row-me" onclick="openEmployeeProfile(${emp.id})">
+            <div class="avatar-circle" style="width:32px;height:32px;font-size:11px;background:${avatarColor(emp.name)}">${initials(emp.name)}</div>
+            <div>
+              <div class="employee-row-name">${esc(emp.name)} <span class="me-tag">Me</span></div>
+              <div class="employee-row-role">${esc(emp.role)}</div>
+            </div>
+            <div class="employee-row-count">${count} task${count === 1 ? '' : 's'}</div>
+          </div>
+        `;
+      }).join('');
+
+      const othersHtml = others.map(emp => {
         const count = tasks.filter(t => t.assigned === emp.name).length;
         return `
           <div class="employee-row" onclick="openEmployeeProfile(${emp.id})">
@@ -914,6 +945,8 @@
           </div>
         `;
       }).join('') || '<div style="font-size:12px;color:var(--label-gray);padding:8px 6px;">No employees yet.</div>';
+
+      list.innerHTML = meHtml + (meHtml ? '<div class="team-dropdown-divider"></div>' : '') + othersHtml;
     }
 
     function addEmployee() {
