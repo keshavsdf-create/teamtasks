@@ -18,6 +18,11 @@
       --pending: #C9A227;
       --approved: #4B7455;
       --rejected: #A8503F;
+      --header-bg: #E7DEC3;
+      --heading-color: #2E4034;
+      --stat-bg: #F3E9B8;
+      --dragover-bg: #D6E4F7;
+      --dragover-border: #3B6FCB;
       --serif: Georgia, 'Iowan Old Style', 'Palatino Linotype', 'Times New Roman', serif;
       --sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
     }
@@ -59,8 +64,7 @@
 
     /* ===== HEADER ===== */
     .header {
-      background: linear-gradient(135deg, rgba(255,231,193,0.6) 0%, rgba(255,213,153,0.45) 45%, rgba(255,246,224,0.6) 100%);
-      backdrop-filter: blur(6px);
+      background: var(--header-bg);
       border-bottom: 1px solid var(--hairline);
       padding: 22px 32px;
       display: flex;
@@ -76,7 +80,7 @@
       font-weight: 400;
       font-size: 26px;
       letter-spacing: 0.2px;
-      color: var(--ink);
+      color: var(--heading-color);
     }
 
     .header-right { display: flex; align-items: center; gap: 18px; }
@@ -132,7 +136,7 @@
       padding: 14px 20px 18px 16px;
       border-right: 1px solid var(--hairline);
       margin-right: 24px;
-      background: linear-gradient(180deg, rgba(255,244,201,0.55) 0%, rgba(255,244,201,0.15) 100%);
+      background: var(--stat-bg);
       border-radius: 6px;
     }
 
@@ -165,11 +169,18 @@
 
     .column {
       background: transparent;
-      border-radius: 0;
+      border-radius: 6px;
       min-width: 264px;
       width: 264px;
-      flex-shrink: 0;
+      flex: 1 1 264px;
       padding: 0;
+      transition: flex-basis 0.2s ease, min-width 0.2s ease, opacity 0.2s ease;
+    }
+
+    .column.column-collapsed {
+      flex: 0 0 44px;
+      min-width: 44px;
+      width: 44px;
     }
 
     .column-header {
@@ -184,6 +195,21 @@
       color: var(--ink);
     }
 
+    .column.column-collapsed .column-header {
+      writing-mode: vertical-rl;
+      transform: rotate(180deg);
+      justify-content: flex-start;
+      align-items: center;
+      gap: 6px;
+      height: 100%;
+      min-height: 160px;
+      border-bottom: none;
+      border-left: 1px solid var(--ink);
+      padding: 10px 0 10px 6px;
+      margin-bottom: 0;
+      font-size: 12px;
+    }
+
     .column-count {
       font-family: var(--sans);
       color: var(--ink-soft);
@@ -192,9 +218,12 @@
 
     .column-body { min-height: 100px; display: flex; flex-direction: column; gap: 10px; }
 
+    .column.column-collapsed .column-body { display: none; }
+
     .column.drag-over {
-      background: rgba(75,99,80,0.06);
-      outline: 1px dashed var(--accent-moss);
+      background: var(--dragover-bg);
+      outline: 2px solid var(--dragover-border);
+      border-radius: 6px;
     }
 
     /* ===== TASK CARDS ===== */
@@ -663,8 +692,9 @@
 
       STATUSES.forEach(s => {
         const colTasks = tasks.filter(t => t.status === s.key);
+        const isEmpty = colTasks.length === 0;
         const col = document.createElement('div');
-        col.className = 'column';
+        col.className = 'column' + (isEmpty ? ' column-collapsed' : '');
         col.dataset.status = s.key;
 
         col.innerHTML = `
