@@ -337,6 +337,7 @@
     }
 
     .profile-edit-input:focus { outline: none; border-color: var(--teal); background: white; }
+    .profile-edit-input:disabled { background: #EEF2F7; color: var(--label-gray); cursor: not-allowed; }
 
     select.profile-edit-input { font-weight: 500; font-size: 12px; color: var(--label-gray); }
 
@@ -928,13 +929,14 @@
           <input type="text" id="profilePasswordInput" class="profile-edit-input" placeholder="Password">
         </div>
       </div>
+      <div id="profileEditNote" style="display:none;font-size:11px;color:var(--label-gray);background:#F8FBFE;border:1px solid var(--border-soft);border-radius:8px;padding:8px 12px;margin-bottom:14px;">Only a manager can edit profile details.</div>
       <div class="team-dropdown-title" style="padding-left:0;">Their Tasks</div>
       <div class="profile-task-list" id="profileTaskList"></div>
       <div class="modal-actions">
         <button class="btn btn-delete" id="deleteEmpBtn" onclick="deleteEmployeeProfile()">Delete Profile</button>
         <button class="btn btn-outline" onclick="openEmployeeDashboard()">View Dashboard</button>
         <button class="btn btn-cancel" onclick="closeEmployeeModal()">Close</button>
-        <button class="btn btn-save" onclick="saveEmployeeProfile()">Save Changes</button>
+        <button class="btn btn-save" id="saveProfileBtn" onclick="saveEmployeeProfile()">Save Changes</button>
       </div>
     </div>
   </div>
@@ -1432,6 +1434,15 @@
       document.getElementById('profileRoleInput').value = emp.role;
       document.getElementById('profileUsernameInput').value = emp.username || '';
       document.getElementById('profilePasswordInput').value = emp.password || '';
+
+      const isManager = currentUser && currentUser.role === 'Manager';
+      const editable = ['profileNameInput', 'profileRoleInput', 'profileUsernameInput', 'profilePasswordInput'];
+      editable.forEach(id => { document.getElementById(id).disabled = !isManager; });
+      document.getElementById('saveProfileBtn').style.display = isManager ? 'inline-block' : 'none';
+      document.getElementById('deleteEmpBtn').style.display = isManager ? 'inline-block' : 'none';
+      document.getElementById('photoInput').disabled = !isManager;
+      document.querySelector('.profile-avatar-wrap').style.cursor = isManager ? 'pointer' : 'default';
+      document.getElementById('profileEditNote').style.display = isManager ? 'none' : 'block';
 
       const empTasks = tasks.filter(t => t.assigned === emp.name);
       const done = empTasks.filter(t => t.status === 'done').length;
