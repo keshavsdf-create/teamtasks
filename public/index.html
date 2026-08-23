@@ -6,311 +6,319 @@
   <title>TeamTasks - Team Task Management</title>
   <style>
     :root {
-      --bg-cream: #F6F3EC;
-      --bg-card: #FFFFFF;
-      --ink: #262420;
-      --ink-soft: #6B6656;
-      --hairline: #E4DFD1;
-      --accent-moss: #4B6350;
-      --accent-gold: #B8863B;
-      --accent-brick: #A8503F;
-      --accent-slate: #46586E;
-      --pending: #C9A227;
-      --approved: #4B7455;
-      --rejected: #A8503F;
-      --header-bg: #E7DEC3;
-      --heading-color: #2E4034;
-      --stat-bg: #F3E9B8;
-      --dragover-bg: #D6E4F7;
-      --dragover-border: #3B6FCB;
-      --serif: Georgia, 'Iowan Old Style', 'Palatino Linotype', 'Times New Roman', serif;
+      --bg-page: #EAF2FB;
+      --card-bg: #FFFFFF;
+      --navy: #16264A;
+      --navy-2: #1E293B;
+      --label-gray: #8A94A6;
+      --border-soft: #E4ECF7;
+      --teal: #14B8C6;
+      --teal-dark: #0FA0AD;
+      --good: #159957;
+      --bad: #DC2626;
+      --purple: #7C5CFC;
+      --orange: #F59E0B;
+      --green: #22C55E;
+      --red: #EF4444;
+      --slate: #64748B;
+      --indigo: #6366F1;
+      --pending: #D9A400;
+      --approved: #159957;
+      --rejected: #DC2626;
+      --shadow-sm: 0 1px 3px rgba(20,50,90,0.06);
+      --shadow-md: 0 4px 16px rgba(20,50,90,0.08);
+      --shadow-lg: 0 10px 30px rgba(20,50,90,0.14);
       --sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
     }
 
     * { margin: 0; padding: 0; box-sizing: border-box; }
-
     html, body { height: 100%; }
 
     body {
       font-family: var(--sans);
-      color: var(--ink);
+      color: var(--navy);
       min-height: 100vh;
-      position: relative;
-      background: var(--bg-cream);
+      background: var(--bg-page);
     }
 
-    /* Fixed textured backdrop, per brief: source image at ~80% opacity,
-       with a light cream scrim so text stays legible on top of it. */
-    .bg-layer {
-      position: fixed;
-      inset: 0;
-      z-index: 0;
-      pointer-events: none;
-      background-image: url('assets/bg-pattern.png');
-      background-size: cover;
-      background-position: center;
-      opacity: 0.8;
-    }
-
-    .bg-scrim {
-      position: fixed;
-      inset: 0;
-      z-index: 1;
-      pointer-events: none;
-      background: linear-gradient(180deg, rgba(246,243,236,0.86) 0%, rgba(246,243,236,0.93) 100%);
-    }
-
-    .app { position: relative; z-index: 2; }
+    .app { max-width: 1400px; margin: 0 auto; padding: 24px; }
 
     /* ===== HEADER ===== */
     .header {
-      background: var(--header-bg);
-      border-bottom: 1px solid var(--hairline);
-      padding: 22px 32px;
+      background: var(--card-bg);
+      border-radius: 20px;
+      box-shadow: var(--shadow-md);
+      padding: 20px 28px;
       display: flex;
       justify-content: space-between;
       align-items: center;
-      position: sticky;
-      top: 0;
-      z-index: 100;
+      margin-bottom: 24px;
     }
 
     .header h1 {
-      font-family: var(--serif);
-      font-weight: 400;
-      font-size: 26px;
-      letter-spacing: 0.2px;
-      color: var(--heading-color);
+      font-size: 28px;
+      font-weight: 800;
+      color: var(--navy);
+      letter-spacing: -0.5px;
     }
 
-    .header-right { display: flex; align-items: center; gap: 18px; }
+    .header-right { display: flex; align-items: center; gap: 14px; }
 
-    .user-badge {
-      font-family: var(--sans);
-      color: var(--ink-soft);
+    .avatar-circle {
+      width: 40px; height: 40px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-weight: 700;
       font-size: 13px;
-      letter-spacing: 0.3px;
-      border: 1px solid var(--hairline);
-      padding: 7px 14px;
-      border-radius: 999px;
-      background: var(--bg-card);
+      flex-shrink: 0;
     }
 
     .btn {
-      padding: 10px 18px;
-      border: 1px solid var(--ink);
+      border: none;
       border-radius: 999px;
-      font-size: 13px;
-      font-weight: 500;
-      letter-spacing: 0.2px;
+      font-size: 14px;
+      font-weight: 600;
       cursor: pointer;
       transition: all 0.15s ease;
       font-family: var(--sans);
     }
 
-    .btn-primary { background: var(--ink); color: var(--bg-cream); }
-    .btn-primary:hover { background: var(--accent-moss); border-color: var(--accent-moss); }
+    .btn-primary {
+      background: var(--teal);
+      color: white;
+      padding: 12px 22px;
+      box-shadow: 0 4px 12px rgba(20,184,198,0.35);
+    }
 
-    .btn-save { background: var(--accent-moss); color: white; border-color: var(--accent-moss); }
-    .btn-cancel { background: transparent; color: var(--ink-soft); border-color: var(--hairline); }
-    .btn-delete { background: transparent; color: var(--accent-brick); border-color: var(--accent-brick); }
-    .btn-approve { background: var(--accent-moss); color: white; border-color: var(--accent-moss); }
-    .btn-reject { background: var(--accent-brick); color: white; border-color: var(--accent-brick); }
-    .btn-small { padding: 6px 12px; font-size: 12px; }
-    .btn-outline { background: transparent; border-color: var(--hairline); color: var(--ink-soft); }
+    .btn-primary:hover { background: var(--teal-dark); transform: translateY(-1px); }
+
+    .btn-save { background: var(--green); color: white; padding: 10px 20px; }
+    .btn-cancel { background: #F1F5F9; color: var(--slate); padding: 10px 20px; }
+    .btn-delete { background: #FEE2E2; color: var(--red); padding: 10px 20px; }
+    .btn-approve { background: var(--green); color: white; padding: 8px 16px; }
+    .btn-reject { background: var(--red); color: white; padding: 8px 16px; }
+    .btn-small { padding: 7px 14px; font-size: 12px; }
+    .btn-outline { background: #F1F5F9; color: var(--slate); padding: 7px 14px; }
 
     /* ===== STATS BAR ===== */
     .stats-bar {
-      display: flex;
-      gap: 0;
-      padding: 24px 32px 8px;
-      flex-wrap: wrap;
-      border-bottom: 1px solid var(--hairline);
-      margin-bottom: 8px;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 18px;
+      margin-bottom: 24px;
     }
 
     .stat-card {
-      flex: 1;
-      min-width: 140px;
-      text-align: left;
-      padding: 14px 20px 18px 16px;
-      border-right: 1px solid var(--hairline);
-      margin-right: 24px;
-      background: var(--stat-bg);
-      border-radius: 6px;
+      background: var(--card-bg);
+      border-radius: 18px;
+      box-shadow: var(--shadow-sm);
+      padding: 20px;
     }
 
-    .stat-card:last-child { border-right: none; margin-right: 0; }
-
-    .stat-number {
-      font-family: var(--serif);
-      font-size: 32px;
-      font-weight: 400;
-      color: var(--ink);
-      line-height: 1;
+    .stat-icon {
+      width: 44px; height: 44px;
+      border-radius: 12px;
+      background: var(--teal);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 16px;
     }
+
+    .stat-icon svg { width: 22px; height: 22px; }
 
     .stat-label {
       font-size: 11px;
-      color: var(--ink-soft);
-      margin-top: 6px;
+      color: var(--label-gray);
       text-transform: uppercase;
-      letter-spacing: 0.8px;
+      letter-spacing: 0.6px;
+      font-weight: 700;
+      margin-bottom: 6px;
     }
+
+    .stat-number {
+      font-size: 34px;
+      font-weight: 800;
+      color: var(--navy);
+      line-height: 1;
+      margin-bottom: 8px;
+    }
+
+    .stat-caption { font-size: 12px; font-weight: 600; }
+    .stat-caption.good { color: var(--good); }
+    .stat-caption.bad { color: var(--bad); }
 
     /* ===== KANBAN BOARD ===== */
     .board {
       display: flex;
-      gap: 20px;
-      padding: 16px 32px 40px;
+      gap: 18px;
       overflow-x: auto;
       align-items: flex-start;
+      padding-bottom: 12px;
     }
 
     .column {
-      background: transparent;
-      border-radius: 6px;
-      min-width: 264px;
-      width: 264px;
-      flex: 1 1 264px;
-      padding: 0;
-      transition: flex-basis 0.2s ease, min-width 0.2s ease, opacity 0.2s ease;
+      background: var(--card-bg);
+      border-radius: 18px;
+      box-shadow: var(--shadow-sm);
+      min-width: 270px;
+      width: 270px;
+      flex: 1 1 270px;
+      padding: 18px;
+      transition: flex-basis 0.2s ease, min-width 0.2s ease, width 0.2s ease;
     }
 
     .column.column-collapsed {
-      flex: 0 0 116px;
-      min-width: 116px;
-      width: 116px;
+      flex: 0 0 120px;
+      min-width: 120px;
+      width: 120px;
+      padding: 14px 10px;
     }
 
     .column-header {
       display: flex;
       justify-content: space-between;
-      align-items: baseline;
-      padding: 0 2px 12px;
-      border-bottom: 1px solid var(--ink);
-      margin-bottom: 14px;
-      font-family: var(--serif);
-      font-size: 15px;
-      color: var(--ink);
+      align-items: center;
+      margin-bottom: 16px;
+    }
+
+    .column-header span:first-child {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--navy);
     }
 
     .column.column-collapsed .column-header {
-      writing-mode: horizontal-tb;
-      transform: none;
       flex-direction: row;
-      justify-content: space-between;
-      align-items: center;
-      height: auto;
-      min-height: auto;
-      border-bottom: 3px solid var(--ink);
-      border-left: none;
-      padding: 6px 8px;
-      margin-bottom: 12px;
-      font-size: 12px;
       white-space: nowrap;
+      overflow: hidden;
+    }
+
+    .column.column-collapsed .column-header span:first-child {
+      font-size: 12px;
       overflow: hidden;
       text-overflow: ellipsis;
     }
 
     .column-count {
-      font-family: var(--sans);
-      color: var(--ink-soft);
-      font-size: 11px;
+      width: 24px; height: 24px;
+      border-radius: 50%;
+      background: var(--teal);
+      color: white;
+      font-size: 12px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
     }
 
-    .column-body { min-height: 100px; display: flex; flex-direction: column; gap: 10px; }
-
+    .column-body { min-height: 80px; display: flex; flex-direction: column; gap: 12px; }
     .column.column-collapsed .column-body { display: none; }
 
     .column.drag-over {
-      background: var(--dragover-bg);
-      outline: 2px solid var(--dragover-border);
-      border-radius: 6px;
+      box-shadow: 0 0 0 2px var(--teal), var(--shadow-md);
+      background: #F0FBFC;
     }
 
     /* ===== TASK CARDS ===== */
     .task-card {
-      background: var(--bg-card);
-      border: 1px solid var(--hairline);
-      border-radius: 4px;
-      padding: 0;
-      box-shadow: 0 1px 2px rgba(38,36,32,0.04);
+      background: var(--card-bg);
+      border-radius: 12px;
+      border-left: 4px solid var(--slate);
+      box-shadow: var(--shadow-sm);
+      padding: 14px 16px;
       cursor: grab;
-      overflow: hidden;
-      transition: border-color 0.15s ease, transform 0.15s ease;
+      transition: transform 0.15s ease, box-shadow 0.15s ease;
     }
 
-    .task-card:hover { border-color: var(--ink-soft); transform: translateY(-1px); }
+    .task-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
     .task-card.dragging { opacity: 0.5; }
 
-    .card-urgency { height: 3px; }
+    .card-title {
+      font-weight: 700;
+      font-size: 14px;
+      color: var(--navy);
+      margin-bottom: 6px;
+      line-height: 1.3;
+    }
 
-    .urgency-high .card-urgency { background: var(--accent-brick); }
-    .urgency-medium .card-urgency { background: var(--accent-gold); }
-    .urgency-low .card-urgency { background: var(--accent-moss); }
+    .card-code { font-size: 11px; color: var(--label-gray); margin-bottom: 10px; }
 
-    .approval-pending .card-urgency { background: var(--pending); }
-    .approval-approved .card-urgency { background: var(--approved); }
-    .approval-rejected .card-urgency { background: var(--rejected); }
+    .card-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    }
 
-    .approval-pending { background: #FBF6E3; }
-    .approval-approved { background: #EEF4EE; }
-    .approval-rejected { background: #FAEDEA; }
+    .card-tagged {
+      font-size: 11px;
+      color: var(--label-gray);
+      margin-bottom: 8px;
+    }
+
+    .card-date {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 12px;
+      color: var(--slate);
+    }
+
+    .card-date.overdue { color: var(--bad); font-weight: 700; }
+    .card-date svg { width: 13px; height: 13px; flex-shrink: 0; }
+
+    .bar-icon { display: flex; align-items: flex-end; gap: 2px; height: 14px; }
+    .bar-icon span { width: 3px; border-radius: 1px; background: #E2E8F0; }
+    .bar-icon span.fill { background: currentColor; }
+    .bar-icon span:nth-child(1) { height: 6px; }
+    .bar-icon span:nth-child(2) { height: 10px; }
+    .bar-icon span:nth-child(3) { height: 14px; }
 
     .approval-badge {
       display: inline-block;
       font-size: 10px;
-      font-weight: 600;
-      padding: 2px 9px;
+      font-weight: 700;
+      padding: 3px 10px;
       border-radius: 999px;
-      margin-top: 8px;
+      margin-bottom: 8px;
       text-transform: uppercase;
       letter-spacing: 0.4px;
     }
 
-    .approval-badge.pending { background: #F3E4A8; color: #7A5F0F; }
-    .approval-badge.approved { background: #CFE1D0; color: #2F4E33; }
-    .approval-badge.rejected { background: #EAC6BE; color: #7A2E20; }
+    .approval-badge.pending { background: #FDF0C6; color: #8A6A00; }
+    .approval-badge.approved { background: #D4F3E1; color: #0F6B3C; }
+    .approval-badge.rejected { background: #FBDADA; color: #A11616; }
 
-    .card-content { padding: 14px; }
-
-    .card-title {
-      font-family: var(--serif);
-      font-weight: 400;
-      font-size: 15px;
-      color: var(--ink);
-      margin-bottom: 8px;
-      line-height: 1.3;
-    }
-
-    .card-meta {
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-      font-size: 12px;
-      color: var(--ink-soft);
-    }
-
-    .card-deadline.overdue { color: var(--accent-brick); font-weight: 600; }
+    .card-icons { display: flex; gap: 10px; margin-top: 6px; font-size: 11px; color: var(--label-gray); }
 
     .card-creator {
-      font-size: 11px;
-      color: var(--ink-soft);
-      opacity: 0.7;
+      font-size: 10px;
+      color: var(--label-gray);
       margin-top: 8px;
       padding-top: 8px;
-      border-top: 1px solid var(--hairline);
+      border-top: 1px solid var(--border-soft);
     }
 
-    .card-icons { display: flex; gap: 10px; margin-top: 6px; font-size: 11px; color: var(--ink-soft); }
+    .empty-hint {
+      text-align: center;
+      font-size: 11px;
+      color: var(--label-gray);
+      padding: 20px 8px;
+      border: 1.5px dashed var(--border-soft);
+      border-radius: 10px;
+    }
 
     /* ===== MODAL ===== */
     .modal-overlay {
       display: none;
       position: fixed;
       top: 0; left: 0; right: 0; bottom: 0;
-      background: rgba(38,36,32,0.45);
+      background: rgba(22,38,74,0.45);
       z-index: 200;
       align-items: center;
       justify-content: center;
@@ -320,32 +328,25 @@
     .modal-overlay.show { display: flex; }
 
     .modal {
-      background: var(--bg-card);
-      border-radius: 6px;
-      border: 1px solid var(--hairline);
+      background: var(--card-bg);
+      border-radius: 20px;
       width: 100%;
       max-width: 540px;
       max-height: 90vh;
       overflow-y: auto;
       padding: 28px;
-      box-shadow: 0 20px 60px rgba(38,36,32,0.25);
+      box-shadow: var(--shadow-lg);
     }
 
-    .modal h2 {
-      font-family: var(--serif);
-      font-weight: 400;
-      font-size: 22px;
-      margin-bottom: 22px;
-      color: var(--ink);
-    }
+    .modal h2 { font-size: 22px; font-weight: 800; margin-bottom: 20px; color: var(--navy); }
 
     .form-group { margin-bottom: 16px; }
 
     .form-group label {
       display: block;
       font-size: 11px;
-      font-weight: 600;
-      color: var(--ink-soft);
+      font-weight: 700;
+      color: var(--label-gray);
       margin-bottom: 6px;
       text-transform: uppercase;
       letter-spacing: 0.5px;
@@ -355,13 +356,13 @@
     .form-group select,
     .form-group textarea {
       width: 100%;
-      padding: 10px 12px;
-      border: 1px solid var(--hairline);
-      border-radius: 4px;
+      padding: 11px 14px;
+      border: 1.5px solid var(--border-soft);
+      border-radius: 10px;
       font-size: 14px;
       font-family: var(--sans);
-      background: var(--bg-cream);
-      color: var(--ink);
+      background: #F8FBFE;
+      color: var(--navy);
     }
 
     .form-group textarea { resize: vertical; min-height: 80px; }
@@ -370,58 +371,47 @@
     .form-group select:focus,
     .form-group textarea:focus {
       outline: none;
-      border-color: var(--ink);
-      background: var(--bg-card);
+      border-color: var(--teal);
+      background: white;
     }
 
     .modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 22px; flex-wrap: wrap; }
 
     .readonly-info {
       font-size: 12px;
-      color: var(--ink-soft);
-      background: var(--bg-cream);
-      border: 1px solid var(--hairline);
-      padding: 8px 12px;
-      border-radius: 4px;
+      color: var(--label-gray);
+      background: #F8FBFE;
+      border: 1px solid var(--border-soft);
+      padding: 10px 14px;
+      border-radius: 10px;
       margin-bottom: 18px;
     }
 
-    .empty-hint {
-      text-align: center;
-      font-size: 11px;
-      color: var(--ink-soft);
-      padding: 20px 8px;
-      border: 1px dashed var(--hairline);
-      border-radius: 4px;
-    }
-
-    /* ===== APPROVAL SECTION ===== */
     .approval-section {
       display: none;
-      background: #FBF8EF;
-      border: 1px solid #EADFB8;
-      border-radius: 6px;
+      background: #FEFAEC;
+      border: 1.5px solid #F3E2A6;
+      border-radius: 14px;
       padding: 16px;
       margin-bottom: 18px;
     }
 
     .approval-section.show { display: block; }
 
-    .approval-status-line { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; font-size: 13px; font-weight: 600; color: var(--ink); }
+    .approval-status-line { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; font-size: 13px; font-weight: 700; color: var(--navy); }
     .status-dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
     .status-dot.pending { background: var(--pending); }
     .status-dot.approved { background: var(--approved); }
     .status-dot.rejected { background: var(--rejected); }
     .approval-buttons { display: flex; gap: 8px; flex-wrap: wrap; }
 
-    /* ===== VOICE NOTES ===== */
     .voice-slot {
       display: flex;
       align-items: center;
       gap: 10px;
-      background: var(--bg-cream);
-      border: 1px solid var(--hairline);
-      border-radius: 4px;
+      background: #F8FBFE;
+      border: 1.5px solid var(--border-soft);
+      border-radius: 10px;
       padding: 10px 12px;
       margin-bottom: 8px;
       flex-wrap: wrap;
@@ -432,51 +422,49 @@
     .rec-btn {
       width: 32px; height: 32px;
       border-radius: 50%;
-      border: 1px solid var(--accent-brick);
+      border: 1.5px solid var(--red);
       cursor: pointer;
       display: flex;
       align-items: center;
       justify-content: center;
       font-size: 13px;
-      color: var(--accent-brick);
-      background: var(--bg-card);
+      color: var(--red);
+      background: white;
       flex-shrink: 0;
     }
 
-    .rec-btn.recording { background: var(--accent-brick); color: white; animation: pulse 1s infinite; }
+    .rec-btn.recording { background: var(--red); color: white; animation: pulse 1s infinite; }
 
     @keyframes pulse {
-      0%, 100% { box-shadow: 0 0 0 0 rgba(168,80,63,0.4); }
-      50% { box-shadow: 0 0 0 7px rgba(168,80,63,0); }
+      0%, 100% { box-shadow: 0 0 0 0 rgba(239,68,68,0.4); }
+      50% { box-shadow: 0 0 0 7px rgba(239,68,68,0); }
     }
 
-    .voice-empty { font-size: 12px; color: var(--ink-soft); }
-    .voice-remove { background: none; border: none; color: var(--accent-brick); cursor: pointer; font-size: 15px; }
+    .voice-empty { font-size: 12px; color: var(--label-gray); }
+    .voice-remove { background: none; border: none; color: var(--red); cursor: pointer; font-size: 15px; }
 
-    /* ===== ATTACHMENTS ===== */
     .attach-dropzone {
-      border: 1px dashed var(--hairline);
-      border-radius: 4px;
+      border: 1.5px dashed var(--border-soft);
+      border-radius: 10px;
       padding: 16px;
       text-align: center;
       font-size: 12px;
-      color: var(--ink-soft);
+      color: var(--label-gray);
       cursor: pointer;
       margin-bottom: 10px;
-      background: var(--bg-cream);
+      background: #F8FBFE;
     }
 
-    .attach-dropzone:hover { border-color: var(--ink); color: var(--ink); }
+    .attach-dropzone:hover { border-color: var(--teal); color: var(--teal-dark); }
     .attach-list { display: flex; flex-direction: column; gap: 8px; }
 
-    .attach-item { display: flex; align-items: center; gap: 10px; background: var(--bg-cream); border: 1px solid var(--hairline); border-radius: 4px; padding: 8px 10px; }
-
-    .attach-thumb { width: 34px; height: 34px; border-radius: 4px; object-fit: cover; background: var(--hairline); flex-shrink: 0; }
+    .attach-item { display: flex; align-items: center; gap: 10px; background: #F8FBFE; border: 1.5px solid var(--border-soft); border-radius: 10px; padding: 8px 10px; }
+    .attach-thumb { width: 34px; height: 34px; border-radius: 8px; object-fit: cover; background: var(--border-soft); flex-shrink: 0; }
 
     .attach-icon {
       width: 34px; height: 34px;
-      border-radius: 4px;
-      background: var(--hairline);
+      border-radius: 8px;
+      background: var(--border-soft);
       display: flex;
       align-items: center;
       justify-content: center;
@@ -487,40 +475,39 @@
     .attach-name {
       flex: 1;
       font-size: 12px;
-      color: var(--ink);
+      color: var(--navy);
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
       cursor: pointer;
     }
 
-    .attach-remove { background: none; border: none; color: var(--accent-brick); cursor: pointer; font-size: 15px; flex-shrink: 0; }
+    .attach-remove { background: none; border: none; color: var(--red); cursor: pointer; font-size: 15px; flex-shrink: 0; }
 
     @media (max-width: 768px) {
-      .stats-bar { padding: 16px 16px 8px; }
-      .board { padding: 16px 16px 32px; }
-      .header { padding: 16px 18px; }
+      .app { padding: 14px; }
+      .header { padding: 16px 18px; border-radius: 16px; }
+      .header h1 { font-size: 22px; }
     }
   </style>
 </head>
 <body>
 
-  <div class="bg-layer"></div>
-  <div class="bg-scrim"></div>
-
   <div class="app">
 
-  <div class="header">
-    <h1>📋 TeamTasks</h1>
-    <div class="header-right">
-      <span class="user-badge">👤 Manager Admin</span>
-      <button class="btn btn-primary" onclick="openAddModal()">+ New Task</button>
+    <div class="header">
+      <h1>TeamTasks</h1>
+      <div class="header-right">
+        <button class="btn btn-primary" onclick="openAddModal()">+ New Task</button>
+        <div class="avatar-circle" id="headerAvatar" style="background:#6366F1;">MA</div>
+      </div>
     </div>
+
+    <div class="stats-bar" id="statsBar"></div>
+
+    <div class="board" id="board"></div>
+
   </div>
-
-  <div class="stats-bar" id="statsBar"></div>
-
-  <div class="board" id="board"></div>
 
   <div class="modal-overlay" id="taskModal">
     <div class="modal">
@@ -565,9 +552,9 @@
       <div class="form-group">
         <label>Urgency</label>
         <select id="fUrgency">
-          <option value="low">🟢 Low</option>
-          <option value="medium" selected>🟡 Medium</option>
-          <option value="high">🔴 High</option>
+          <option value="low">Low</option>
+          <option value="medium" selected>Medium</option>
+          <option value="high">High</option>
         </select>
       </div>
 
@@ -596,9 +583,9 @@
           <span id="approvalStatusText">Pending</span>
         </div>
         <div class="approval-buttons">
-          <button type="button" class="btn btn-approve btn-small" onclick="setApproval('approved')">✅ Approve</button>
-          <button type="button" class="btn btn-reject btn-small" onclick="setApproval('rejected')">❌ Reject</button>
-          <button type="button" class="btn btn-outline btn-small" onclick="setApproval('pending')">↺ Reset to Pending</button>
+          <button type="button" class="btn btn-approve btn-small" onclick="setApproval('approved')">Approve</button>
+          <button type="button" class="btn btn-reject btn-small" onclick="setApproval('rejected')">Reject</button>
+          <button type="button" class="btn btn-outline btn-small" onclick="setApproval('pending')">Reset to Pending</button>
         </div>
       </div>
 
@@ -611,7 +598,7 @@
       <div class="form-group">
         <label>Attachments (image, video, doc — up to 4)</label>
         <div class="attach-dropzone" onclick="document.getElementById('fileInput').click()">
-          📎 Click to add files (<span id="attachCount">0</span>/4)
+          Click to add files (<span id="attachCount">0</span>/4)
         </div>
         <input type="file" id="fileInput" multiple accept="image/*,video/*,.pdf,.doc,.docx,.txt" style="display:none" onchange="handleFiles(this.files)">
         <div class="attach-list" id="attachList"></div>
@@ -625,18 +612,28 @@
     </div>
   </div>
 
-  </div>
-
   <script>
     const STATUSES = [
-      { key: 'todo', label: 'To Do' },
-      { key: 'in-progress', label: 'In Progress' },
-      { key: 'approval', label: 'Approval' },
-      { key: 'done', label: 'Done' },
-      { key: 'need-help', label: 'Need Help' },
-      { key: 'hold', label: 'Hold' },
-      { key: 'future', label: 'Future' }
+      { key: 'todo', label: 'To Do', color: '#7C5CFC' },
+      { key: 'in-progress', label: 'In Progress', color: '#F59E0B' },
+      { key: 'approval', label: 'Approval', color: '#14B8C6' },
+      { key: 'done', label: 'Done', color: '#22C55E' },
+      { key: 'need-help', label: 'Need Help', color: '#EF4444' },
+      { key: 'hold', label: 'Hold', color: '#64748B' },
+      { key: 'future', label: 'Future', color: '#6366F1' }
     ];
+    const STATUS_COLOR = Object.fromEntries(STATUSES.map(s => [s.key, s.color]));
+
+    const AVATAR_COLORS = ['#6366F1', '#F59E0B', '#14B8C6', '#EF4444', '#22C55E', '#7C5CFC'];
+
+    const ICONS = {
+      total: '<svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 2 7l10 5 10-5-10-5Z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>',
+      inProgress: '<svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>',
+      done: '<svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>',
+      approval: '<svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6"/><path d="m9 15 2 2 4-4"/></svg>',
+      overdue: '<svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/><path d="M12 14v3M12 20h.01"/></svg>',
+      calendar: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>'
+    };
 
     let tasks = [];
     let editingId = null;
@@ -647,6 +644,7 @@
     let mediaRecorder = null;
     let recordingSlot = null;
     let recordedChunks = [];
+    let taskCounter = 100;
 
     function init() {
       const saved = localStorage.getItem('teamtasks_data');
@@ -654,13 +652,15 @@
         tasks = JSON.parse(saved);
       } else {
         tasks = [
-          { id: 1, name: 'Design Dashboard UI', desc: 'Create modern mockups', assigned: 'John', tagged: ['Sarah'], deadline: '2026-08-28', urgency: 'high', status: 'in-progress', createdBy: 'Manager Admin', voiceNotes: [null, null], attachments: [] },
-          { id: 2, name: 'Setup Database', desc: 'Configure data storage', assigned: 'Alex', tagged: [], deadline: '2026-08-25', urgency: 'high', status: 'todo', createdBy: 'Manager Admin', voiceNotes: [null, null], attachments: [] },
-          { id: 3, name: 'Write Documentation', desc: 'User guide for the team', assigned: 'Sarah', tagged: [], deadline: '2026-09-05', urgency: 'low', status: 'future', createdBy: 'Manager Admin', voiceNotes: [null, null], attachments: [] },
-          { id: 4, name: 'Marketing Budget Approval', desc: 'Q4 campaign budget sign-off', assigned: 'John', tagged: [], deadline: '2026-08-24', urgency: 'medium', status: 'approval', approvalStatus: 'pending', createdBy: 'John', voiceNotes: [null, null], attachments: [] }
+          { id: 1, code: 'T-101', name: 'Design Dashboard UI', desc: 'Create modern mockups', assigned: 'John', tagged: ['Sarah'], deadline: '2026-08-28', urgency: 'high', status: 'in-progress', createdBy: 'Manager Admin', voiceNotes: [null, null], attachments: [] },
+          { id: 2, code: 'T-102', name: 'Setup Database', desc: 'Configure data storage', assigned: 'Alex', tagged: [], deadline: '2026-08-25', urgency: 'high', status: 'todo', createdBy: 'Manager Admin', voiceNotes: [null, null], attachments: [] },
+          { id: 3, code: 'T-103', name: 'Write Documentation', desc: 'User guide for the team', assigned: 'Sarah', tagged: [], deadline: '2026-09-05', urgency: 'low', status: 'future', createdBy: 'Manager Admin', voiceNotes: [null, null], attachments: [] },
+          { id: 4, code: 'T-104', name: 'Marketing Budget Approval', desc: 'Q4 campaign budget sign-off', assigned: 'John', tagged: [], deadline: '2026-08-24', urgency: 'medium', status: 'approval', approvalStatus: 'pending', createdBy: 'John', voiceNotes: [null, null], attachments: [] }
         ];
         persist();
       }
+      const codes = tasks.map(t => t.code).filter(Boolean).map(c => parseInt(c.replace('T-', ''), 10)).filter(n => !isNaN(n));
+      taskCounter = codes.length ? Math.max(...codes) : 100;
       render();
     }
 
@@ -673,6 +673,22 @@
       renderBoard();
     }
 
+    function initials(name) {
+      return name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
+    }
+
+    function avatarColor(name) {
+      let sum = 0;
+      for (let i = 0; i < name.length; i++) sum += name.charCodeAt(i);
+      return AVATAR_COLORS[sum % AVATAR_COLORS.length];
+    }
+
+    function formatDate(iso) {
+      if (!iso) return '';
+      const d = new Date(iso + 'T00:00:00');
+      return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    }
+
     function renderStats() {
       const total = tasks.length;
       const done = tasks.filter(t => t.status === 'done').length;
@@ -680,13 +696,22 @@
       const pendingApproval = tasks.filter(t => t.status === 'approval' && (t.approvalStatus || 'pending') === 'pending').length;
       const overdue = tasks.filter(t => t.deadline && t.deadline < today() && t.status !== 'done').length;
 
-      document.getElementById('statsBar').innerHTML = `
-        <div class="stat-card"><div class="stat-number">${total}</div><div class="stat-label">Total Tasks</div></div>
-        <div class="stat-card"><div class="stat-number">${inProgress}</div><div class="stat-label">In Progress</div></div>
-        <div class="stat-card"><div class="stat-number">${done}</div><div class="stat-label">Completed</div></div>
-        <div class="stat-card"><div class="stat-number" style="color:#806b00">${pendingApproval}</div><div class="stat-label">Awaiting Approval</div></div>
-        <div class="stat-card"><div class="stat-number" style="color:${overdue > 0 ? '#dc3545' : '#28a745'}">${overdue}</div><div class="stat-label">Overdue</div></div>
-      `;
+      const cards = [
+        { icon: ICONS.total, label: 'Total Tasks', value: total, caption: `Across all statuses`, good: true },
+        { icon: ICONS.inProgress, label: 'In Progress', value: inProgress, caption: inProgress ? `${inProgress} being worked on` : 'Nothing active', good: true },
+        { icon: ICONS.done, label: 'Completed', value: done, caption: done ? `${done} finished` : 'None yet', good: true },
+        { icon: ICONS.approval, label: 'Awaiting Approval', value: pendingApproval, caption: pendingApproval ? `Needs manager review` : 'All clear', good: !pendingApproval },
+        { icon: ICONS.overdue, label: 'Overdue', value: overdue, caption: overdue ? `${overdue} need attention` : 'None, great job!', good: !overdue }
+      ];
+
+      document.getElementById('statsBar').innerHTML = cards.map(c => `
+        <div class="stat-card">
+          <div class="stat-icon">${c.icon}</div>
+          <div class="stat-label">${c.label}</div>
+          <div class="stat-number">${c.value}</div>
+          <div class="stat-caption ${c.good ? 'good' : 'bad'}">${c.caption}</div>
+        </div>
+      `).join('');
     }
 
     function renderBoard() {
@@ -706,7 +731,7 @@
             <span class="column-count">${colTasks.length}</span>
           </div>
           <div class="column-body" data-status="${s.key}">
-            ${colTasks.length === 0 ? '<div class="empty-hint">Drop tasks here</div>' : ''}
+            ${isEmpty ? '<div class="empty-hint">Drop tasks here</div>' : ''}
           </div>
         `;
 
@@ -734,18 +759,25 @@
       });
     }
 
+    function urgencyBarIcon(urgency) {
+      const level = urgency === 'high' ? 3 : urgency === 'medium' ? 2 : 1;
+      const color = urgency === 'high' ? 'var(--red)' : urgency === 'medium' ? 'var(--orange)' : 'var(--green)';
+      let bars = '';
+      for (let i = 1; i <= 3; i++) {
+        bars += `<span class="${i <= level ? 'fill' : ''}"></span>`;
+      }
+      return `<div class="bar-icon" style="color:${color}">${bars}</div>`;
+    }
+
     function makeCard(task) {
       const card = document.createElement('div');
-      let cls = `task-card urgency-${task.urgency}`;
-      if (task.status === 'approval') {
-        cls += ` approval-${task.approvalStatus || 'pending'}`;
-      }
-      card.className = cls;
+      card.className = 'task-card';
+      card.style.borderLeftColor = STATUS_COLOR[task.status] || '#64748B';
       card.draggable = true;
 
       const isOverdue = task.deadline && task.deadline < today() && task.status !== 'done';
       const taggedHtml = task.tagged && task.tagged.length
-        ? `<span>🏷️ ${task.tagged.join(', ')}</span>` : '';
+        ? `<div class="card-tagged">🏷️ ${esc(task.tagged.join(', '))}</div>` : '';
 
       const voiceCount = (task.voiceNotes || []).filter(Boolean).length;
       const fileCount = (task.attachments || []).length;
@@ -755,19 +787,23 @@
       const approvalBadge = task.status === 'approval'
         ? `<span class="approval-badge ${task.approvalStatus || 'pending'}">${task.approvalStatus || 'pending'}</span>` : '';
 
+      const av = initials(task.assigned || '?');
+      const avColor = avatarColor(task.assigned || '?');
+
       card.innerHTML = `
-        <div class="card-urgency"></div>
-        <div class="card-content">
-          <div class="card-title">${esc(task.name)}</div>
-          <div class="card-meta">
-            <span>👤 ${esc(task.assigned)}</span>
-            ${task.deadline ? `<span class="card-deadline ${isOverdue ? 'overdue' : ''}">📅 ${task.deadline}${isOverdue ? ' ⚠️ Overdue' : ''}</span>` : ''}
-            ${taggedHtml}
-          </div>
-          ${approvalBadge}
-          ${iconsHtml}
-          <div class="card-creator">Created by ${esc(task.createdBy)}</div>
+        ${approvalBadge}
+        <div class="card-title">${esc(task.name)}</div>
+        <div class="card-code">${esc(task.code || '')}</div>
+        <div class="card-row">
+          <div class="card-date ${isOverdue ? 'overdue' : ''}">${ICONS.calendar} ${task.deadline ? formatDate(task.deadline) : 'No date'}</div>
+          <div class="avatar-circle" style="width:26px;height:26px;font-size:10px;background:${avColor}">${av}</div>
         </div>
+        <div class="card-row" style="margin-bottom:0;">
+          ${taggedHtml || '<span></span>'}
+          ${urgencyBarIcon(task.urgency)}
+        </div>
+        ${iconsHtml}
+        <div class="card-creator">Created by ${esc(task.createdBy)}</div>
       `;
 
       card.addEventListener('dragstart', e => {
@@ -814,7 +850,7 @@
       document.getElementById('modalTitle').textContent = 'Edit Task';
       const info = document.getElementById('createdByInfo');
       info.style.display = 'block';
-      info.textContent = `Created by: ${task.createdBy}`;
+      info.textContent = `${task.code || ''} — Created by: ${task.createdBy}`;
       document.getElementById('deleteBtn').style.display = 'inline-block';
       document.getElementById('fName').value = task.name;
       document.getElementById('fDesc').value = task.desc || '';
@@ -862,7 +898,8 @@
         const task = tasks.find(t => t.id === editingId);
         Object.assign(task, data);
       } else {
-        tasks.push({ id: Date.now(), createdBy: 'Manager Admin', ...data });
+        taskCounter++;
+        tasks.push({ id: Date.now(), code: 'T-' + taskCounter, createdBy: 'Manager Admin', ...data });
       }
 
       persist();
