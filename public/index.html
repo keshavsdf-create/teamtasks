@@ -974,6 +974,7 @@
       <div class="form-group">
         <label>Assigned To</label>
         <select id="fAssigned"></select>
+        <div id="assignedHint" style="display:none;font-size:11px;color:var(--label-gray);margin-top:6px;">Only a manager can assign tasks to someone else.</div>
       </div>
 
       <div class="form-group">
@@ -1194,6 +1195,7 @@
       document.getElementById('loginScreen').style.display = 'none';
       document.getElementById('appRoot').style.display = 'block';
       applyRoleUI();
+      renderAssignOptions();
       renderEmployeeList();
       render();
     }
@@ -1384,13 +1386,26 @@
     function renderAssignOptions() {
       const names = employees.map(e => e.name);
       const optsHtml = names.map(n => `<option value="${esc(n)}">${esc(n)}</option>`).join('');
+      const isManager = currentUser && currentUser.role === 'Manager';
 
       const assignedSelect = document.getElementById('fAssigned');
       const taggedSelect = document.getElementById('fTagged');
+      const assignedHint = document.getElementById('assignedHint');
+
       if (assignedSelect) {
-        const prevValue = assignedSelect.value;
-        assignedSelect.innerHTML = optsHtml;
-        if (names.includes(prevValue)) assignedSelect.value = prevValue;
+        if (isManager || !currentUser) {
+          assignedSelect.disabled = false;
+          const prevValue = assignedSelect.value;
+          assignedSelect.innerHTML = optsHtml;
+          if (names.includes(prevValue)) assignedSelect.value = prevValue;
+          if (assignedHint) assignedHint.style.display = 'none';
+        } else {
+          // Employees can only assign tasks to themselves - only the manager assigns to others
+          assignedSelect.innerHTML = `<option value="${esc(currentUser.name)}">${esc(currentUser.name)}</option>`;
+          assignedSelect.value = currentUser.name;
+          assignedSelect.disabled = true;
+          if (assignedHint) assignedHint.style.display = 'block';
+        }
       }
       if (taggedSelect) {
         const prevSelected = getMultiSelect('fTagged');
@@ -1728,7 +1743,10 @@
       document.getElementById('deleteBtn').style.display = 'none';
       document.getElementById('fName').value = '';
       document.getElementById('fDesc').value = '';
-      document.getElementById('fAssigned').value = 'Manager Admin';
+      renderAssignOptions();
+      if (currentUser && currentUser.role === 'Manager') {
+        document.getElementById('fAssigned').value = currentUser.name;
+      }
       clearMultiSelect('fTagged');
       document.getElementById('fDeadline').value = '';
       document.getElementById('fUrgency').value = 'medium';
@@ -1755,7 +1773,21 @@
       document.getElementById('deleteBtn').style.display = 'inline-block';
       document.getElementById('fName').value = task.name;
       document.getElementById('fDesc').value = task.desc || '';
-      document.getElementById('fAssigned').value = task.assigned;
+
+      const isManager = currentUser && currentUser.role === 'Manager';
+      const assignedSelect = document.getElementById('fAssigned');
+      const assignedHint = document.getElementById('assignedHint');
+      if (isManager) {
+        renderAssignOptions();
+        assignedSelect.value = task.assigned;
+      } else {
+        // Employees see who it's really assigned to, but can't change it
+        assignedSelect.innerHTML = `<option value="${esc(task.assigned)}">${esc(task.assigned)}</option>`;
+        assignedSelect.value = task.assigned;
+        assignedSelect.disabled = true;
+        if (assignedHint) assignedHint.style.display = 'block';
+      }
+
       setMultiSelect('fTagged', task.tagged || []);
       document.getElementById('fDeadline').value = task.deadline || '';
       document.getElementById('fUrgency').value = task.urgency;
