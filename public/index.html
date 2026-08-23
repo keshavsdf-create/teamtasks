@@ -43,6 +43,53 @@
 
     .app { max-width: 1400px; margin: 0 auto; padding: 24px; }
 
+    /* ===== LOGIN SCREEN ===== */
+    .login-screen {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .login-card {
+      background: var(--card-bg);
+      border-radius: 20px;
+      box-shadow: var(--shadow-lg);
+      padding: 36px 32px;
+      width: 100%;
+      max-width: 360px;
+    }
+
+    .login-title {
+      font-size: 26px;
+      font-weight: 800;
+      color: var(--navy);
+      text-align: center;
+      letter-spacing: -0.5px;
+      margin-bottom: 4px;
+    }
+
+    .login-subtitle {
+      font-size: 13px;
+      color: var(--label-gray);
+      text-align: center;
+      margin-bottom: 24px;
+    }
+
+    .login-error {
+      display: none;
+      background: #FEE2E2;
+      color: var(--red);
+      font-size: 12px;
+      font-weight: 600;
+      padding: 8px 12px;
+      border-radius: 8px;
+      margin-bottom: 14px;
+    }
+
+    .login-error.show { display: block; }
+
     /* ===== HEADER ===== */
     .header {
       background: var(--card-bg);
@@ -746,30 +793,53 @@
 </head>
 <body>
 
-  <div class="app">
+  <div class="login-screen" id="loginScreen">
+    <div class="login-card">
+      <h1 class="login-title">TeamTasks</h1>
+      <p class="login-subtitle">Sign in to your dashboard</p>
+      <div class="form-group">
+        <label>Login ID</label>
+        <input type="text" id="loginUsername" placeholder="e.g. john" autocomplete="username">
+      </div>
+      <div class="form-group">
+        <label>Password</label>
+        <input type="password" id="loginPassword" placeholder="••••" autocomplete="current-password">
+      </div>
+      <div id="loginError" class="login-error"></div>
+      <button class="btn btn-primary" style="width:100%;justify-content:center;" onclick="handleLoginSubmit()">Log In</button>
+    </div>
+  </div>
+
+  <div class="app" id="appRoot" style="display:none;">
 
     <div class="header">
       <h1>TeamTasks</h1>
       <div class="header-right">
-        <button class="btn btn-primary" onclick="openAddModal()">+ New Task</button>
+        <button class="btn btn-primary" id="newTaskBtn" onclick="openAddModal()">+ New Task</button>
         <div class="team-trigger-wrap">
           <button class="team-trigger" onclick="toggleTeamDropdown(event)">
             <div class="avatar-circle" id="headerAvatar" style="width:28px;height:28px;font-size:11px;background:#6366F1;">MA</div>
-            Team <span class="chev">▾</span>
+            <span id="headerUserName">Team</span> <span class="chev">▾</span>
           </button>
           <div class="team-dropdown" id="teamDropdown">
-            <div class="team-dropdown-title">Your Team</div>
+            <div class="team-dropdown-title" id="teamListTitle">Your Team</div>
             <div id="employeeList"></div>
-            <div class="team-dropdown-divider"></div>
-            <div class="team-dropdown-title">Add Employee</div>
-            <div class="add-employee-form">
-              <input type="text" id="newEmpName" placeholder="Full name">
-              <select id="newEmpRole">
-                <option value="Employee">Employee</option>
-                <option value="Manager">Manager</option>
-              </select>
-              <button class="add-employee-btn" onclick="addEmployee()">+ Add Employee</button>
+            <div class="team-dropdown-divider" id="addEmpDivider"></div>
+            <div id="addEmployeeSection">
+              <div class="team-dropdown-title">Add Employee</div>
+              <div class="add-employee-form">
+                <input type="text" id="newEmpName" placeholder="Full name" oninput="suggestEmpId()">
+                <select id="newEmpRole">
+                  <option value="Employee">Employee</option>
+                  <option value="Manager">Manager</option>
+                </select>
+                <input type="text" id="newEmpId" placeholder="Login ID" oninput="markIdEdited()">
+                <input type="text" id="newEmpPassword" placeholder="Password" value="1234">
+                <button class="add-employee-btn" onclick="addEmployee()">+ Add Employee</button>
+              </div>
             </div>
+            <div class="team-dropdown-divider"></div>
+            <button class="add-employee-btn" id="logoutBtn" style="background:#F1F5F9;color:var(--navy);" onclick="handleLogout()">Log Out</button>
           </div>
         </div>
       </div>
@@ -798,6 +868,17 @@
         </div>
       </div>
       <div class="profile-stats" id="profileStats"></div>
+      <div class="team-dropdown-title" style="padding-left:0;">Login Credentials</div>
+      <div class="form-group" style="display:flex;gap:8px;margin-bottom:14px;">
+        <div style="flex:1;">
+          <label style="font-size:10px;color:var(--label-gray);font-weight:700;display:block;margin-bottom:4px;">LOGIN ID</label>
+          <input type="text" id="profileUsernameInput" class="profile-edit-input" placeholder="Login ID">
+        </div>
+        <div style="flex:1;">
+          <label style="font-size:10px;color:var(--label-gray);font-weight:700;display:block;margin-bottom:4px;">PASSWORD</label>
+          <input type="text" id="profilePasswordInput" class="profile-edit-input" placeholder="Password">
+        </div>
+      </div>
       <div class="team-dropdown-title" style="padding-left:0;">Their Tasks</div>
       <div class="profile-task-list" id="profileTaskList"></div>
       <div class="modal-actions">
@@ -945,6 +1026,7 @@
     let tasks = [];
     let editingId = null;
     let employees = [];
+    let currentUser = null;
 
     let tempVoiceNotes = [null, null];
     let tempAttachments = [];
@@ -973,19 +1055,96 @@
         employees = JSON.parse(savedEmp);
       } else {
         employees = [
-          { id: 1, name: 'Manager Admin', role: 'Manager' },
-          { id: 2, name: 'John', role: 'Employee' },
-          { id: 3, name: 'Sarah', role: 'Employee' },
-          { id: 4, name: 'Alex', role: 'Employee' }
+          { id: 1, name: 'Manager Admin', role: 'Manager', username: 'manager', password: '1234' },
+          { id: 2, name: 'John', role: 'Employee', username: 'john', password: '1234' },
+          { id: 3, name: 'Sarah', role: 'Employee', username: 'sarah', password: '1234' },
+          { id: 4, name: 'Alex', role: 'Employee', username: 'alex', password: '1234' }
         ];
-        persistEmployees();
       }
+
+      // Migration: any employee saved before login existed gets default credentials
+      let needsMigration = false;
+      employees.forEach(e => {
+        if (!e.username) { e.username = slugify(e.name); needsMigration = true; }
+        if (!e.password) { e.password = '1234'; needsMigration = true; }
+      });
+      if (needsMigration || !savedEmp) persistEmployees();
 
       const codes = tasks.map(t => t.code).filter(Boolean).map(c => parseInt(c.replace('T-', ''), 10)).filter(n => !isNaN(n));
       taskCounter = codes.length ? Math.max(...codes) : 100;
       renderAssignOptions();
+
+      checkSession();
+    }
+
+    function slugify(name) {
+      return name.trim().toLowerCase().replace(/[^a-z0-9]+/g, '');
+    }
+
+    function checkSession() {
+      const savedUsername = localStorage.getItem('teamtasks_session');
+      if (savedUsername) {
+        const emp = employees.find(e => e.username === savedUsername);
+        if (emp) {
+          currentUser = emp;
+          showApp();
+          return;
+        }
+      }
+      showLogin();
+    }
+
+    function showLogin() {
+      currentUser = null;
+      document.getElementById('loginScreen').style.display = 'flex';
+      document.getElementById('appRoot').style.display = 'none';
+      document.getElementById('loginUsername').value = '';
+      document.getElementById('loginPassword').value = '';
+      document.getElementById('loginError').classList.remove('show');
+    }
+
+    function showApp() {
+      document.getElementById('loginScreen').style.display = 'none';
+      document.getElementById('appRoot').style.display = 'block';
+      applyRoleUI();
       renderEmployeeList();
       render();
+    }
+
+    function handleLoginSubmit() {
+      const username = document.getElementById('loginUsername').value.trim().toLowerCase();
+      const password = document.getElementById('loginPassword').value;
+      const emp = employees.find(e => e.username.toLowerCase() === username && e.password === password);
+      const errEl = document.getElementById('loginError');
+
+      if (!emp) {
+        errEl.textContent = 'Incorrect ID or password.';
+        errEl.classList.add('show');
+        return;
+      }
+
+      currentUser = emp;
+      localStorage.setItem('teamtasks_session', emp.username);
+      showApp();
+    }
+
+    function handleLogout() {
+      document.getElementById('teamDropdown').classList.remove('show');
+      localStorage.removeItem('teamtasks_session');
+      showLogin();
+    }
+
+    function applyRoleUI() {
+      const isManager = currentUser.role === 'Manager';
+      document.getElementById('teamListTitle').textContent = isManager ? 'Your Team' : 'My Profile';
+      document.getElementById('addEmployeeSection').style.display = isManager ? 'block' : 'none';
+      document.getElementById('addEmpDivider').style.display = isManager ? 'block' : 'none';
+      document.getElementById('headerUserName').textContent = currentUser.name.split(' ')[0];
+    }
+
+    function visibleTasks() {
+      if (!currentUser || currentUser.role === 'Manager') return tasks;
+      return tasks.filter(t => t.assigned === currentUser.name || (t.tagged || []).includes(currentUser.name));
     }
 
     function persist() {
@@ -997,6 +1156,7 @@
     }
 
     function render() {
+      if (!currentUser) return;
       renderStats();
       renderBoard();
       renderEmployeeList();
@@ -1089,9 +1249,24 @@
       list.innerHTML = meHtml + (meHtml ? '<div class="team-dropdown-divider"></div>' : '') + othersHtml;
     }
 
+    let empIdManuallyEdited = false;
+
+    function suggestEmpId() {
+      if (empIdManuallyEdited) return;
+      const name = document.getElementById('newEmpName').value;
+      document.getElementById('newEmpId').value = slugify(name);
+    }
+
+    function markIdEdited() {
+      empIdManuallyEdited = true;
+    }
+
     function addEmployee() {
       const nameInput = document.getElementById('newEmpName');
       const roleSelect = document.getElementById('newEmpRole');
+      const idInput = document.getElementById('newEmpId');
+      const passwordInput = document.getElementById('newEmpPassword');
+
       const name = nameInput.value.trim();
       if (!name) { alert('Please enter a name'); return; }
       if (employees.some(e => e.name.toLowerCase() === name.toLowerCase())) {
@@ -1099,10 +1274,21 @@
         return;
       }
 
-      employees.push({ id: Date.now(), name, role: roleSelect.value });
+      let username = idInput.value.trim().toLowerCase() || slugify(name);
+      if (employees.some(e => e.username.toLowerCase() === username)) {
+        alert('That Login ID is already taken. Please choose another.');
+        return;
+      }
+      const password = passwordInput.value.trim() || '1234';
+
+      employees.push({ id: Date.now(), name, role: roleSelect.value, username, password });
       persistEmployees();
+
       nameInput.value = '';
       roleSelect.value = 'Employee';
+      idInput.value = '';
+      passwordInput.value = '1234';
+      empIdManuallyEdited = false;
 
       renderEmployeeList();
       renderAssignOptions();
@@ -1142,6 +1328,8 @@
       refreshProfileAvatar(emp);
       document.getElementById('profileNameInput').value = emp.name;
       document.getElementById('profileRoleInput').value = emp.role;
+      document.getElementById('profileUsernameInput').value = emp.username || '';
+      document.getElementById('profilePasswordInput').value = emp.password || '';
 
       const empTasks = tasks.filter(t => t.assigned === emp.name);
       const done = empTasks.filter(t => t.status === 'done').length;
@@ -1203,6 +1391,15 @@
       const newName = document.getElementById('profileNameInput').value.trim();
       if (!newName) { alert('Name cannot be empty'); return; }
       const newRole = document.getElementById('profileRoleInput').value;
+      const newUsername = document.getElementById('profileUsernameInput').value.trim().toLowerCase();
+      const newPassword = document.getElementById('profilePasswordInput').value.trim();
+
+      if (!newUsername) { alert('Login ID cannot be empty'); return; }
+      if (!newPassword) { alert('Password cannot be empty'); return; }
+      if (employees.some(e => e.id !== emp.id && e.username.toLowerCase() === newUsername)) {
+        alert('That Login ID is already taken by someone else.');
+        return;
+      }
 
       const oldName = emp.name;
       if (oldName !== newName) {
@@ -1214,10 +1411,20 @@
         persist();
       }
 
+      const wasCurrentUser = currentUser && currentUser.id === emp.id;
+
       emp.name = newName;
       emp.role = newRole;
       emp.photo = tempProfilePhoto;
+      emp.username = newUsername;
+      emp.password = newPassword;
       persistEmployees();
+
+      if (wasCurrentUser) {
+        currentUser = emp;
+        localStorage.setItem('teamtasks_session', emp.username);
+        applyRoleUI();
+      }
 
       renderAssignOptions();
       renderEmployeeList();
@@ -1228,6 +1435,11 @@
     function deleteEmployeeProfile() {
       const emp = employees.find(e => e.id === editingEmployeeId);
       if (!emp) return;
+
+      if (currentUser && currentUser.id === emp.id) {
+        alert("You can't delete your own account while logged in as them.");
+        return;
+      }
 
       const assignedCount = tasks.filter(t => t.assigned === emp.name).length;
       const warning = assignedCount > 0
@@ -1293,11 +1505,12 @@
 
 
     function renderStats() {
-      const total = tasks.length;
-      const done = tasks.filter(t => t.status === 'done').length;
-      const inProgress = tasks.filter(t => t.status === 'in-progress').length;
-      const pendingApproval = tasks.filter(t => t.status === 'approval' && (t.approvalStatus || 'pending') === 'pending').length;
-      const overdue = tasks.filter(t => t.deadline && t.deadline < today() && t.status !== 'done').length;
+      const vTasks = visibleTasks();
+      const total = vTasks.length;
+      const done = vTasks.filter(t => t.status === 'done').length;
+      const inProgress = vTasks.filter(t => t.status === 'in-progress').length;
+      const pendingApproval = vTasks.filter(t => t.status === 'approval' && (t.approvalStatus || 'pending') === 'pending').length;
+      const overdue = vTasks.filter(t => t.deadline && t.deadline < today() && t.status !== 'done').length;
 
       const cards = [
         { icon: ICONS.total, label: 'Total Tasks', value: total, caption: `Across all statuses`, good: true },
@@ -1320,9 +1533,10 @@
     function renderBoard() {
       const board = document.getElementById('board');
       board.innerHTML = '';
+      const vTasks = visibleTasks();
 
       STATUSES.forEach(s => {
-        const colTasks = tasks.filter(t => t.status === s.key);
+        const colTasks = vTasks.filter(t => t.status === s.key);
         const isEmpty = colTasks.length === 0;
         const col = document.createElement('div');
         col.className = 'column' + (isEmpty ? ' column-collapsed' : '');
@@ -1728,6 +1942,13 @@
 
     document.addEventListener('keydown', e => {
       if (e.key === 'Escape') { closeModal(); closeDashboardModal(); closeEmployeeModal(); }
+    });
+
+    document.getElementById('loginUsername').addEventListener('keydown', e => {
+      if (e.key === 'Enter') document.getElementById('loginPassword').focus();
+    });
+    document.getElementById('loginPassword').addEventListener('keydown', e => {
+      if (e.key === 'Enter') handleLoginSubmit();
     });
 
     init();
