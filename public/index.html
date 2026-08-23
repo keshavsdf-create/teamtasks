@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>TeamTasks - Team Task Management</title>
+  <link rel="icon" type="image/png" href="assets/favicon.png">
   <style>
     :root {
       --bg-page: #EAF2FB;
@@ -67,6 +68,16 @@
       padding: 36px 32px;
       width: 100%;
       max-width: 360px;
+    }
+
+    .login-logo {
+      display: block;
+      width: 64px;
+      height: 64px;
+      border-radius: 16px;
+      object-fit: cover;
+      margin: 0 auto 14px;
+      box-shadow: var(--shadow-sm);
     }
 
     .login-title {
@@ -850,6 +861,7 @@
 
   <div class="login-screen" id="loginScreen">
     <div class="login-card">
+      <img src="assets/favicon.png" alt="TeamTasks logo" class="login-logo">
       <h1 class="login-title">TeamTasks</h1>
       <p class="login-subtitle">Sign in to your dashboard</p>
       <div class="form-group">
