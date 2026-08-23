@@ -176,6 +176,20 @@
     .team-trigger:hover { background: #E4ECF7; }
     .team-trigger .chev { color: var(--label-gray); font-size: 10px; }
 
+    .logout-icon-btn {
+      background: #F1F5F9;
+      border: none;
+      border-radius: 999px;
+      padding: 8px 14px;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--red);
+      cursor: pointer;
+      font-family: var(--sans);
+    }
+
+    .logout-icon-btn:hover { background: #FEE2E2; }
+
     .team-dropdown {
       display: none;
       position: absolute;
@@ -876,6 +890,7 @@
             <button class="add-employee-btn" id="logoutBtn" style="background:#F1F5F9;color:var(--navy);" onclick="handleLogout()">Log Out</button>
           </div>
         </div>
+        <button class="logout-icon-btn" onclick="handleLogout()" title="Log out">Log Out</button>
       </div>
     </div>
 
