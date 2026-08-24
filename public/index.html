@@ -1513,14 +1513,16 @@
       document.getElementById('loginScreen').style.display = 'none';
       document.getElementById('appRoot').style.display = 'block';
       applyRoleUI();
-      renderAssignOptions();
-      renderEmployeeList();
       
-      // Load data from Supabase after successful login
+      // Load data from Supabase before rendering
       init().then(() => {
+        renderAssignOptions();
+        renderEmployeeList();
         render();
       }).catch(err => {
         console.error('Error loading data after login:', err);
+        renderAssignOptions();
+        renderEmployeeList();
         render(); // Still render with what we have
       });
     }
