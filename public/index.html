@@ -1409,7 +1409,9 @@
           username: e.email?.split('@')[0] || e.name.toLowerCase(),
           password: e.password || '1234'
         }));
+        console.log('✅ Loaded employees from Supabase:', employees.length);
       } else {
+        console.warn('⚠️ Supabase failed or empty, using fallback employees');
         // Seed with sample employees
         const sampleEmployees = [
           { name: 'Manager Admin', role: 'Manager', email: 'manager@teamtasks.com', password: '1234' },
@@ -1475,11 +1477,6 @@
       renderAssignOptions();
 
       checkSession();
-      
-      // Mark initialization as complete - employees are loaded from Supabase
-      window.initializationComplete = true;
-      console.log('✅ Initialization complete. Employees loaded:', employees.length);
-      console.log('Available login IDs:', employees.map(e => e.username).join(', '));
     }
 
     function slugify(name) {
@@ -1532,11 +1529,7 @@
     }
 
     function handleLoginSubmit() {
-      if (!window.initializationComplete) {
-        alert('⏳ Please wait while we load your team data from Supabase...');
-        return;
-      }
-      
+      // Don't block login - use whatever data we have (Supabase or fallback)
       const username = document.getElementById('loginUsername').value.trim().toLowerCase();
       const password = document.getElementById('loginPassword').value;
       const errEl = document.getElementById('loginError');
