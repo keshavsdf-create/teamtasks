@@ -3,6 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
   <title>TeamTasks - Team Task Management</title>
   <link rel="icon" type="image/png" href="assets/favicon.png">
   <style>
@@ -1393,17 +1396,44 @@
         tasks = sampleTasks;
       }
 
-      const savedEmp = localStorage.getItem('teamtasks_employees');
-      if (savedEmp) {
-        employees = JSON.parse(savedEmp);
+      // Load employees from Supabase
+      const { data: supabaseEmployees, error: empError } = await supabase
+        .from('users')
+        .select('*');
+      
+      if (!empError && supabaseEmployees && supabaseEmployees.length > 0) {
+        employees = supabaseEmployees.map(e => ({
+          id: e.id,
+          name: e.name,
+          role: e.role || 'Employee',
+          username: e.email?.split('@')[0] || e.name.toLowerCase(),
+          password: e.password || '1234'
+        }));
       } else {
-        employees = [
-          { id: 1, name: 'Manager Admin', role: 'Manager', username: 'manager', password: '1234' },
-          { id: 2, name: 'John', role: 'Employee', username: 'john', password: '1234' },
-          { id: 3, name: 'Sarah', role: 'Employee', username: 'sarah', password: '1234' },
-          { id: 4, name: 'Alex', role: 'Employee', username: 'alex', password: '1234' }
+        // Seed with sample employees
+        const sampleEmployees = [
+          { name: 'Manager Admin', role: 'Manager', email: 'manager@teamtasks.com', password: '1234' },
+          { name: 'John', role: 'Employee', email: 'john@teamtasks.com', password: '1234' },
+          { name: 'Sarah', role: 'Employee', email: 'sarah@teamtasks.com', password: '1234' },
+          { name: 'Alex', role: 'Employee', email: 'alex@teamtasks.com', password: '1234' }
         ];
+        
+        for (const emp of sampleEmployees) {
+          await supabase.from('users').insert(emp);
+        }
+        
+        // Reload from Supabase after seeding
+        const { data: reloaded } = await supabase.from('users').select('*');
+        employees = reloaded.map(e => ({
+          id: e.id,
+          name: e.name,
+          role: e.role || 'Employee',
+          username: e.email?.split('@')[0] || e.name.toLowerCase(),
+          password: e.password || '1234'
+        }));
       }
+      
+      localStorage.setItem('teamtasks_employees', JSON.stringify(employees));
 
       // Migration: runs ONCE ever (flagged), so it never reverts credentials you change later
       const alreadyMigrated = localStorage.getItem('teamtasks_creds_migrated');
@@ -1772,7 +1802,7 @@
       empIdManuallyEdited = true;
     }
 
-    function addEmployee() {
+    async function addEmployee() {
       const nameInput = document.getElementById('newEmpName');
       const roleSelect = document.getElementById('newEmpRole');
       const idInput = document.getElementById('newEmpId');
@@ -1791,8 +1821,30 @@
         return;
       }
       const password = passwordInput.value.trim() || '1234';
+      const email = username + '@teamtasks.com';
 
-      employees.push({ id: Date.now(), name, role: roleSelect.value, username, password });
+      // Save to Supabase
+      const { error } = await supabase.from('users').insert({
+        name: name,
+        email: email,
+        role: roleSelect.value,
+        password: password
+      });
+
+      if (error) {
+        alert('Error adding employee: ' + error.message);
+        return;
+      }
+
+      // Reload employees from Supabase
+      const { data: reloaded } = await supabase.from('users').select('*');
+      employees = reloaded.map(e => ({
+        id: e.id,
+        name: e.name,
+        role: e.role || 'Employee',
+        username: e.email?.split('@')[0] || e.name.toLowerCase(),
+        password: e.password || '1234'
+      }));
       persistEmployees();
 
       nameInput.value = '';
@@ -1803,6 +1855,7 @@
 
       renderEmployeeList();
       renderAssignOptions();
+      alert(`✅ Employee "${name}" added successfully!\nLogin ID: ${username}\nPassword: 1234`);
     }
 
     function renderAssignOptions() {
