@@ -672,6 +672,126 @@
       background: #F0FBFC;
     }
 
+    /* Achievement Column */
+    .column-achievement {
+      flex: 0 0 100px;
+      min-width: 100px;
+      width: 100px;
+      padding: 10px 8px;
+      background: linear-gradient(135deg, #FEF3C7 0%, #FCD34D 100%);
+      border: 2px solid #FBBF24;
+      cursor: pointer;
+    }
+
+    .column-achievement .column-header {
+      margin-bottom: 8px;
+    }
+
+    .achievement-header span {
+      font-size: 14px !important;
+    }
+
+    .achievement-count {
+      background: #D97706 !important;
+      font-size: 11px !important;
+      width: 20px !important;
+      height: 20px !important;
+    }
+
+    /* Modal Styles */
+    .modal-overlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0, 0, 0, 0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+
+    .modal-content {
+      background: white;
+      border-radius: 20px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      width: 90%;
+      max-width: 600px;
+      max-height: 80vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 24px;
+      border-bottom: 1px solid #E4ECF7;
+    }
+
+    .modal-header h2 {
+      margin: 0;
+      color: var(--navy);
+      font-size: 22px;
+    }
+
+    .btn-close {
+      background: none;
+      border: none;
+      font-size: 24px;
+      cursor: pointer;
+      color: var(--label-gray);
+      padding: 0;
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .btn-close:hover {
+      color: var(--navy);
+      background: #F3F4F6;
+      border-radius: 8px;
+    }
+
+    .modal-body {
+      padding: 20px 24px;
+      overflow-y: auto;
+      flex: 1;
+    }
+
+    .achievement-card {
+      background: linear-gradient(135deg, #F0FDF4 0%, #DCFCE7 100%);
+      border-left: 4px solid #22C55E;
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 12px;
+      transition: transform 0.2s ease;
+    }
+
+    .achievement-card:hover {
+      transform: translateX(4px);
+    }
+
+    .achievement-title {
+      font-weight: 700;
+      font-size: 16px;
+      color: var(--navy);
+      margin-bottom: 6px;
+    }
+
+    .achievement-desc {
+      font-size: 14px;
+      color: var(--label-gray);
+      margin-bottom: 8px;
+    }
+
+    .achievement-meta {
+      font-size: 12px;
+      color: var(--label-gray);
+      font-style: italic;
+    }
+
     /* ===== TASK CARDS ===== */
     .task-card {
       background: var(--card-bg);
@@ -959,6 +1079,7 @@
       .login-right { min-height: auto; padding: 24px 16px; }
     }
   </style>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.1/dist/umd/supabase.min.js"></script>
 </head>
 <body>
 
@@ -1180,6 +1301,11 @@
   </div>
 
   <script>
+    // Initialize Supabase
+    const SUPABASE_URL = 'https://yptdkjryrpfmfouejmop.supabase.co';
+    const SUPABASE_ANON_KEY = 'sb_publishable_ymPQMeSYZtv0_RzB843fYQ_kFRsa5cV';
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
     const STATUSES = [
       { key: 'todo', label: 'To Do', color: '#7C5CFC' },
       { key: 'in-progress', label: 'In Progress', color: '#F59E0B' },
@@ -1187,7 +1313,8 @@
       { key: 'done', label: 'Done', color: '#22C55E' },
       { key: 'need-help', label: 'Need Help', color: '#EF4444' },
       { key: 'hold', label: 'Hold', color: '#64748B' },
-      { key: 'future', label: 'Future', color: '#6366F1' }
+      { key: 'future', label: 'Future', color: '#6366F1' },
+      { key: 'achievement', label: '✨ Achievements', color: '#FBBF24', minified: true }
     ];
     const STATUS_COLOR = Object.fromEntries(STATUSES.map(s => [s.key, s.color]));
 
@@ -1215,18 +1342,55 @@
     let recordedChunks = [];
     let taskCounter = 100;
 
-    function init() {
-      const saved = localStorage.getItem('teamtasks_data');
-      if (saved) {
-        tasks = JSON.parse(saved);
+    async function init() {
+      // Load tasks from Supabase
+      const { data: supabaseTasks, error: tasksError } = await supabase
+        .from('tasks')
+        .select('*')
+        .neq('status', 'achievement');
+      
+      if (!tasksError && supabaseTasks && supabaseTasks.length > 0) {
+        tasks = supabaseTasks.map(t => ({
+          id: t.id,
+          code: t.code || `T-${Math.floor(Math.random() * 900) + 100}`,
+          name: t.title,
+          desc: t.description || '',
+          assigned: t.assigned_to || 'Unassigned',
+          tagged: t.tags || [],
+          deadline: t.deadline,
+          urgency: t.urgency || 'medium',
+          status: t.status || 'todo',
+          approvalStatus: t.approval_status || 'pending',
+          createdBy: t.created_by || 'System',
+          voiceNotes: [null, null],
+          attachments: []
+        }));
       } else {
-        tasks = [
+        // Seed with sample data if database is empty
+        const sampleTasks = [
           { id: 1, code: 'T-101', name: 'Design Dashboard UI', desc: 'Create modern mockups', assigned: 'John', tagged: ['Sarah'], deadline: '2026-08-28', urgency: 'high', status: 'in-progress', createdBy: 'Manager Admin', voiceNotes: [null, null], attachments: [] },
           { id: 2, code: 'T-102', name: 'Setup Database', desc: 'Configure data storage', assigned: 'Alex', tagged: [], deadline: '2026-08-25', urgency: 'high', status: 'todo', createdBy: 'Manager Admin', voiceNotes: [null, null], attachments: [] },
           { id: 3, code: 'T-103', name: 'Write Documentation', desc: 'User guide for the team', assigned: 'Sarah', tagged: [], deadline: '2026-09-05', urgency: 'low', status: 'future', createdBy: 'Manager Admin', voiceNotes: [null, null], attachments: [] },
           { id: 4, code: 'T-104', name: 'Marketing Budget Approval', desc: 'Q4 campaign budget sign-off', assigned: 'John', tagged: [], deadline: '2026-08-24', urgency: 'medium', status: 'approval', approvalStatus: 'pending', createdBy: 'John', voiceNotes: [null, null], attachments: [] }
         ];
-        persist();
+        
+        // Seed database with sample data
+        for (const task of sampleTasks) {
+          await supabase.from('tasks').insert({
+            title: task.name,
+            description: task.desc,
+            status: task.status,
+            assigned_to: task.assigned,
+            created_by: task.createdBy,
+            deadline: task.deadline,
+            urgency: task.urgency,
+            tags: task.tagged,
+            approval_status: task.approvalStatus || 'pending',
+            code: task.code
+          });
+        }
+        
+        tasks = sampleTasks;
       }
 
       const savedEmp = localStorage.getItem('teamtasks_employees');
@@ -1374,12 +1538,132 @@
       return tasks.filter(t => t.assigned === currentUser.name || (t.tagged || []).includes(currentUser.name));
     }
 
-    function persist() {
+    async function persist() {
       localStorage.setItem('teamtasks_data', JSON.stringify(tasks));
+      
+      // Also save to Supabase
+      for (const task of tasks) {
+        if (task.status !== 'achievement') {
+          const { data: existing } = await supabase
+            .from('tasks')
+            .select('id')
+            .eq('id', task.id);
+          
+          if (existing && existing.length > 0) {
+            // Update existing task
+            await supabase
+              .from('tasks')
+              .update({
+                title: task.name,
+                description: task.desc,
+                status: task.status,
+                assigned_to: task.assigned,
+                created_by: task.createdBy,
+                deadline: task.deadline,
+                urgency: task.urgency,
+                tags: task.tagged,
+                approval_status: task.approvalStatus || 'pending',
+                updated_at: new Date().toISOString()
+              })
+              .eq('id', task.id);
+          } else {
+            // Insert new task
+            await supabase
+              .from('tasks')
+              .insert({
+                id: task.id,
+                title: task.name,
+                description: task.desc,
+                status: task.status,
+                assigned_to: task.assigned,
+                created_by: task.createdBy,
+                deadline: task.deadline,
+                urgency: task.urgency,
+                tags: task.tagged,
+                approval_status: task.approvalStatus || 'pending',
+                code: task.code
+              });
+          }
+        }
+      }
     }
 
     function persistEmployees() {
       localStorage.setItem('teamtasks_employees', JSON.stringify(employees));
+    }
+
+    async function moveToAchievement(task) {
+      // Save to achievements table in Supabase
+      await supabase
+        .from('achievements')
+        .insert({
+          task_id: task.id,
+          user_id: currentUser?.id || task.assigned,
+          completed_at: new Date().toISOString()
+        });
+      
+      // Remove from main tasks array
+      tasks = tasks.filter(t => t.id !== task.id);
+      
+      // Save changes
+      await persist();
+      render();
+    }
+
+    async function showAchievementsModal() {
+      // Load achievements from Supabase
+      const { data: achievements, error } = await supabase
+        .from('achievements')
+        .select('task_id, completed_at')
+        .order('completed_at', { ascending: false });
+      
+      if (error || !achievements) {
+        alert('Could not load achievements');
+        return;
+      }
+      
+      // Get full task details from our tasks array or create display data
+      const achievedTasks = achievements.map(ach => {
+        const originalTask = tasks.find(t => t.id === ach.task_id);
+        return {
+          id: ach.task_id,
+          name: originalTask?.name || `Task #${ach.task_id}`,
+          desc: originalTask?.desc || '',
+          completedAt: ach.completed_at,
+          urgency: originalTask?.urgency || 'medium'
+        };
+      });
+      
+      // Show modal
+      let modalHtml = `
+        <div class="modal-overlay" onclick="closeAchievementsModal()">
+          <div class="modal-content" onclick="event.stopPropagation()">
+            <div class="modal-header">
+              <h2>✨ Your Achievements</h2>
+              <button class="btn-close" onclick="closeAchievementsModal()">✕</button>
+            </div>
+            <div class="modal-body" style="max-height: 500px; overflow-y: auto;">
+              ${achievedTasks.length === 0 ? '<p>No achievements yet. Keep working! 🚀</p>' : ''}
+              ${achievedTasks.map(task => `
+                <div class="achievement-card">
+                  <div class="achievement-title">${task.name}</div>
+                  ${task.desc ? `<div class="achievement-desc">${task.desc}</div>` : ''}
+                  <div class="achievement-meta">
+                    <span>Completed: ${new Date(task.completedAt).toLocaleDateString()}</span>
+                  </div>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        </div>
+      `;
+      
+      document.body.insertAdjacentHTML('beforeend', modalHtml);
+    }
+
+    function closeAchievementsModal() {
+      const overlay = document.querySelector('.modal-overlay');
+      if (overlay) overlay.remove();
     }
 
     function render() {
@@ -1788,21 +2072,37 @@
         const colTasks = vTasks.filter(t => t.status === s.key);
         const isEmpty = colTasks.length === 0;
         const col = document.createElement('div');
-        col.className = 'column' + (isEmpty ? ' column-collapsed' : '');
-        col.dataset.status = s.key;
-
-        col.innerHTML = `
-          <div class="column-header">
-            <span>${s.label}</span>
-            <span class="column-count">${colTasks.length}</span>
-          </div>
-          <div class="column-body" data-status="${s.key}">
-            ${isEmpty ? '<div class="empty-hint">Drop tasks here</div>' : ''}
-          </div>
-        `;
+        
+        // Special handling for achievement column
+        if (s.key === 'achievement') {
+          col.className = 'column column-achievement' + (isEmpty ? ' column-collapsed' : '');
+          col.dataset.status = s.key;
+          col.innerHTML = `
+            <div class="column-header achievement-header">
+              <span style="cursor: pointer; font-size: 18px;" onclick="showAchievementsModal()" title="Click to see achievements">${s.label}</span>
+              <span class="column-count achievement-count">${colTasks.length}</span>
+            </div>
+            <div class="column-body" data-status="${s.key}">
+            </div>
+          `;
+        } else {
+          col.className = 'column' + (isEmpty ? ' column-collapsed' : '');
+          col.dataset.status = s.key;
+          col.innerHTML = `
+            <div class="column-header">
+              <span>${s.label}</span>
+              <span class="column-count">${colTasks.length}</span>
+            </div>
+            <div class="column-body" data-status="${s.key}">
+              ${isEmpty ? '<div class="empty-hint">Drop tasks here</div>' : ''}
+            </div>
+          `;
+        }
 
         const body = col.querySelector('.column-body');
-        colTasks.forEach(t => body.appendChild(makeCard(t)));
+        if (s.key !== 'achievement') {
+          colTasks.forEach(t => body.appendChild(makeCard(t)));
+        }
 
         col.addEventListener('dragover', e => { e.preventDefault(); col.classList.add('drag-over'); });
         col.addEventListener('dragleave', () => col.classList.remove('drag-over'));
@@ -1812,12 +2112,17 @@
           const id = parseInt(e.dataTransfer.getData('text/plain'));
           const task = tasks.find(t => t.id === id);
           if (task && task.status !== s.key) {
-            task.status = s.key;
-            if (s.key === 'approval' && !task.approvalStatus) {
-              task.approvalStatus = 'pending';
+            if (s.key === 'achievement') {
+              // Move to achievements
+              moveToAchievement(task);
+            } else {
+              task.status = s.key;
+              if (s.key === 'approval' && !task.approvalStatus) {
+                task.approvalStatus = 'pending';
+              }
+              persist();
+              render();
             }
-            persist();
-            render();
           }
         });
 
@@ -2224,7 +2529,10 @@
       if (e.key === 'Enter') handleLoginSubmit();
     });
 
-    init();
+    (async () => {
+      await init();
+      renderDashboard();
+    })();
   </script>
 </body>
 </html>
