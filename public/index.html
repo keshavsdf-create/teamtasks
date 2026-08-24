@@ -1628,14 +1628,33 @@
     }
 
     async function moveToAchievement(task) {
-      // Save to achievements table in Supabase
-      await supabase
-        .from('achievements')
-        .insert({
-          task_id: task.id,
-          user_id: currentUser?.id || task.assigned,
-          completed_at: new Date().toISOString()
-        });
+      // Always keep a local snapshot as a fallback (works even if Supabase blocks writes)
+      const localAchievements = JSON.parse(localStorage.getItem('teamtasks_achievements') || '[]');
+      localAchievements.unshift({
+        task_id: task.id,
+        name: task.name,
+        desc: task.desc,
+        urgency: task.urgency,
+        completed_at: new Date().toISOString()
+      });
+      localStorage.setItem('teamtasks_achievements', JSON.stringify(localAchievements));
+
+      // Also try to save to Supabase (best-effort)
+      try {
+        const { error } = await supabase
+          .from('achievements')
+          .insert({
+            task_id: task.id,
+            user_id: currentUser?.id || task.assigned,
+            completed_at: new Date().toISOString()
+          });
+        if (error) {
+          console.error('❌ Supabase achievements insert failed:', error.message);
+          console.warn('Likely a Row-Level Security policy issue on the achievements table. Achievement was still saved locally.');
+        }
+      } catch (err) {
+        console.error('❌ Error saving achievement to Supabase:', err);
+      }
       
       // Remove from main tasks array
       tasks = tasks.filter(t => t.id !== task.id);
@@ -1646,28 +1665,48 @@
     }
 
     async function showAchievementsModal() {
-      // Load achievements from Supabase
-      const { data: achievements, error } = await supabase
-        .from('achievements')
-        .select('task_id, completed_at')
-        .order('completed_at', { ascending: false });
-      
-      if (error || !achievements) {
-        alert('Could not load achievements');
-        return;
+      // Load local fallback achievements first (always available)
+      const localAchievements = JSON.parse(localStorage.getItem('teamtasks_achievements') || '[]');
+
+      // Try to also load from Supabase (best-effort)
+      let achievedTasks = localAchievements.map(a => ({
+        id: a.task_id,
+        name: a.name || `Task #${a.task_id}`,
+        desc: a.desc || '',
+        completedAt: a.completed_at,
+        urgency: a.urgency || 'medium'
+      }));
+
+      try {
+        const { data: achievements, error } = await supabase
+          .from('achievements')
+          .select('task_id, completed_at')
+          .order('completed_at', { ascending: false });
+        
+        if (error) {
+          console.error('❌ Supabase achievements select failed:', error.message);
+          console.warn('Showing locally-saved achievements only. This is likely a Row-Level Security policy issue.');
+        } else if (achievements && achievements.length > 0) {
+          // Merge Supabase results with local, de-duplicating by task_id
+          const seen = new Set(achievedTasks.map(t => t.id));
+          achievements.forEach(ach => {
+            if (!seen.has(ach.task_id)) {
+              const originalTask = tasks.find(t => t.id === ach.task_id);
+              achievedTasks.push({
+                id: ach.task_id,
+                name: originalTask?.name || `Task #${ach.task_id}`,
+                desc: originalTask?.desc || '',
+                completedAt: ach.completed_at,
+                urgency: originalTask?.urgency || 'medium'
+              });
+              seen.add(ach.task_id);
+            }
+          });
+          achievedTasks.sort((a, b) => new Date(b.completedAt) - new Date(a.completedAt));
+        }
+      } catch (err) {
+        console.error('❌ Error loading achievements from Supabase:', err);
       }
-      
-      // Get full task details from our tasks array or create display data
-      const achievedTasks = achievements.map(ach => {
-        const originalTask = tasks.find(t => t.id === ach.task_id);
-        return {
-          id: ach.task_id,
-          name: originalTask?.name || `Task #${ach.task_id}`,
-          desc: originalTask?.desc || '',
-          completedAt: ach.completed_at,
-          urgency: originalTask?.urgency || 'medium'
-        };
-      });
       
       // Show modal
       let modalHtml = `
@@ -1770,7 +1809,7 @@
       const meHtml = managers.map(emp => {
         const count = tasks.filter(t => t.assigned === emp.name).length;
         return `
-          <div class="employee-row employee-row-me" onclick="openEmployeeProfile(${emp.id})">
+          <div class="employee-row employee-row-me" onclick="openEmployeeProfile('${emp.id}')">
             ${avatarHTML(emp.name, 32, 11)}
             <div>
               <div class="employee-row-name">${esc(emp.name)} <span class="me-tag">Me</span></div>
@@ -1784,7 +1823,7 @@
       const othersHtml = others.map(emp => {
         const count = tasks.filter(t => t.assigned === emp.name).length;
         return `
-          <div class="employee-row" onclick="openEmployeeProfile(${emp.id})">
+          <div class="employee-row" onclick="openEmployeeProfile('${emp.id}')">
             ${avatarHTML(emp.name, 32, 11)}
             <div>
               <div class="employee-row-name">${esc(emp.name)}</div>
@@ -1832,15 +1871,25 @@
       const email = username + '@teamtasks.com';
 
       // Save to Supabase
-      const { error } = await supabase.from('users').insert({
+      const { data: inserted, error } = await supabase.from('users').insert({
         name: name,
         email: email,
         role: roleSelect.value,
         password: password
-      });
+      }).select();
 
       if (error) {
-        alert('Error adding employee: ' + error.message);
+        console.error('❌ Supabase insert failed:', error.message);
+        console.warn('This is very likely a Supabase Row-Level Security (RLS) policy problem: RLS is enabled on the users table but no INSERT policy exists, so Supabase silently rejects the write for the anon key.');
+        // Still add locally so the manager isn't blocked, using a local id
+        employees.push({
+          id: 'local-' + Date.now(),
+          name, role: roleSelect.value, username, password
+        });
+        persistEmployees();
+        renderEmployeeList();
+        renderAssignOptions();
+        alert(`⚠️ Employee "${name}" was added locally, but could NOT be saved to Supabase.\n\nReason: ${error.message}\n\nThis usually means Supabase's Row-Level Security policies are blocking writes. See the message from Claude for the SQL fix.`);
         return;
       }
 
@@ -1942,7 +1991,7 @@
         listEl.innerHTML = empTasks.map(t => {
           const statusInfo = STATUSES.find(s => s.key === t.status);
           return `
-            <div class="profile-task-row" onclick="closeEmployeeModal(); openEditModal(${t.id});">
+            <div class="profile-task-row" onclick="closeEmployeeModal(); openEditModal('${t.id}');">
               <span class="profile-task-dot" style="background:${statusInfo ? statusInfo.color : '#64748B'}"></span>
               <span class="profile-task-name">${esc(t.name)}</span>
               <span class="profile-task-status">${statusInfo ? statusInfo.label : t.status}</span>
@@ -2073,7 +2122,7 @@
         const rows = colTasks.length === 0
           ? `<div class="dash-empty">Not currently working on anything here</div>`
           : colTasks.map(t => `
-              <div class="dash-task-row" onclick="closeDashboardModal(); closeEmployeeModal(); openEditModal(${t.id});">
+              <div class="dash-task-row" onclick="closeDashboardModal(); closeEmployeeModal(); openEditModal('${t.id}');">
                 ${esc(t.name)}
                 <span class="dash-task-date">${t.deadline ? formatDate(t.deadline) : ''}</span>
               </div>
@@ -2170,8 +2219,8 @@
         col.addEventListener('drop', e => {
           e.preventDefault();
           col.classList.remove('drag-over');
-          const id = parseInt(e.dataTransfer.getData('text/plain'));
-          const task = tasks.find(t => t.id === id);
+          const id = e.dataTransfer.getData('text/plain');
+          const task = tasks.find(t => String(t.id) === String(id));
           if (task && task.status !== s.key) {
             if (s.key === 'achievement') {
               // Move to achievements
@@ -2273,7 +2322,7 @@
     }
 
     function openEditModal(id) {
-      const task = tasks.find(t => t.id === id);
+      const task = tasks.find(t => String(t.id) === String(id));
       if (!task) return;
       editingId = id;
       tempVoiceNotes = (task.voiceNotes && task.voiceNotes.length === 2) ? [...task.voiceNotes] : [null, null];
