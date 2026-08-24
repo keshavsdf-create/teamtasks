@@ -1586,7 +1586,7 @@
           
           if (existing && existing.length > 0) {
             // Update existing task
-            await supabase
+            const { error: updateError } = await supabase
               .from('tasks')
               .update({
                 title: task.name,
@@ -1601,9 +1601,10 @@
                 updated_at: new Date().toISOString()
               })
               .eq('id', task.id);
+            if (updateError) console.error('❌ Supabase task update failed for', task.name, ':', updateError.message);
           } else {
             // Insert new task
-            await supabase
+            const { error: insertError } = await supabase
               .from('tasks')
               .insert({
                 id: task.id,
@@ -1618,6 +1619,7 @@
                 approval_status: task.approvalStatus || 'pending',
                 code: task.code
               });
+            if (insertError) console.error('❌ Supabase task insert failed for', task.name, ':', insertError.message);
           }
         }
       }
@@ -1656,6 +1658,21 @@
         console.error('❌ Error saving achievement to Supabase:', err);
       }
       
+      // Remove the task row from Supabase's tasks table entirely so it
+      // doesn't reappear on next load (its old status would otherwise
+      // still match the "not achievement" filter used when loading tasks)
+      try {
+        const { error: deleteError } = await supabase
+          .from('tasks')
+          .delete()
+          .eq('id', task.id);
+        if (deleteError) {
+          console.error('❌ Supabase task delete failed:', deleteError.message);
+        }
+      } catch (err) {
+        console.error('❌ Error deleting task from Supabase:', err);
+      }
+
       // Remove from main tasks array
       tasks = tasks.filter(t => t.id !== task.id);
       
@@ -2185,12 +2202,13 @@
         
         // Special handling for achievement column
         if (s.key === 'achievement') {
-          col.className = 'column column-achievement' + (isEmpty ? ' column-collapsed' : '');
+          const achievedCount = JSON.parse(localStorage.getItem('teamtasks_achievements') || '[]').length;
+          col.className = 'column column-achievement column-collapsed';
           col.dataset.status = s.key;
           col.innerHTML = `
             <div class="column-header achievement-header">
               <span style="cursor: pointer; font-size: 18px;" onclick="showAchievementsModal()" title="Click to see achievements">${s.label}</span>
-              <span class="column-count achievement-count">${colTasks.length}</span>
+              <span class="column-count achievement-count">${achievedCount}</span>
             </div>
             <div class="column-body" data-status="${s.key}">
             </div>
@@ -2391,11 +2409,12 @@
       }
 
       if (editingId) {
-        const task = tasks.find(t => t.id === editingId);
+        const task = tasks.find(t => String(t.id) === String(editingId));
         Object.assign(task, data);
       } else {
         taskCounter++;
-        tasks.push({ id: Date.now(), code: 'T-' + taskCounter, createdBy: 'Manager Admin', ...data });
+        const newId = (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : String(Date.now());
+        tasks.push({ id: newId, code: 'T-' + taskCounter, createdBy: currentUser ? currentUser.name : 'Manager Admin', ...data });
       }
 
       persist();
