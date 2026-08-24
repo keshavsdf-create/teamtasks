@@ -1334,7 +1334,12 @@
 
     let tasks = [];
     let editingId = null;
-    let employees = [];
+    let employees = [
+      { id: '1', name: 'Manager Admin', role: 'Manager', username: 'manager', password: '1234', email: 'manager@teamtasks.com' },
+      { id: '2', name: 'John', role: 'Employee', username: 'john', password: '1234', email: 'john@teamtasks.com' },
+      { id: '3', name: 'Sarah', role: 'Employee', username: 'sarah', password: '1234', email: 'sarah@teamtasks.com' },
+      { id: '4', name: 'Alex', role: 'Employee', username: 'alex', password: '1234', email: 'alex@teamtasks.com' }
+    ];
     let currentUser = null;
 
     let tempVoiceNotes = [null, null];
@@ -1396,7 +1401,7 @@
         tasks = sampleTasks;
       }
 
-      // Load employees from Supabase
+      // Load employees from Supabase (async, but employees already have fallback values)
       const { data: supabaseEmployees, error: empError } = await supabase
         .from('users')
         .select('*');
@@ -1411,28 +1416,7 @@
         }));
         console.log('✅ Loaded employees from Supabase:', employees.length);
       } else {
-        console.warn('⚠️ Supabase failed or empty, using fallback employees');
-        // Seed with sample employees
-        const sampleEmployees = [
-          { name: 'Manager Admin', role: 'Manager', email: 'manager@teamtasks.com', password: '1234' },
-          { name: 'John', role: 'Employee', email: 'john@teamtasks.com', password: '1234' },
-          { name: 'Sarah', role: 'Employee', email: 'sarah@teamtasks.com', password: '1234' },
-          { name: 'Alex', role: 'Employee', email: 'alex@teamtasks.com', password: '1234' }
-        ];
-        
-        for (const emp of sampleEmployees) {
-          await supabase.from('users').insert(emp);
-        }
-        
-        // Reload from Supabase after seeding
-        const { data: reloaded } = await supabase.from('users').select('*');
-        employees = reloaded.map(e => ({
-          id: e.id,
-          name: e.name,
-          role: e.role || 'Employee',
-          username: e.email?.split('@')[0] || e.name.toLowerCase(),
-          password: e.password || '1234'
-        }));
+        console.warn('⚠️ Supabase unavailable, using hardcoded fallback employees');
       }
       
       localStorage.setItem('teamtasks_employees', JSON.stringify(employees));
