@@ -797,6 +797,30 @@
       font-style: italic;
     }
 
+    .achievement-group { margin-bottom: 20px; }
+    .achievement-group:last-child { margin-bottom: 0; }
+
+    .achievement-group-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-weight: 700;
+      font-size: 14px;
+      color: var(--navy);
+      margin-bottom: 10px;
+      padding-bottom: 6px;
+      border-bottom: 1px solid #E4ECF7;
+    }
+
+    .achievement-group-count {
+      background: #FBBF24;
+      color: #78350F;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 10px;
+    }
+
     /* ===== TASK CARDS ===== */
     .task-card {
       background: var(--card-bg);
@@ -1636,6 +1660,8 @@
     }
 
     async function moveToAchievement(task) {
+      const achieverName = task.assigned || 'Unassigned';
+
       // Always keep a local snapshot as a fallback (works even if Supabase blocks writes)
       const localAchievements = JSON.parse(localStorage.getItem('teamtasks_achievements') || '[]');
       localAchievements.unshift({
@@ -1643,17 +1669,20 @@
         name: task.name,
         desc: task.desc,
         urgency: task.urgency,
+        assignedTo: achieverName,
         completed_at: new Date().toISOString()
       });
       localStorage.setItem('teamtasks_achievements', JSON.stringify(localAchievements));
 
-      // Also try to save to Supabase (best-effort)
+      // Also try to save to Supabase (best-effort).
+      // user_id here holds the achiever's display name (the task's assignee),
+      // not whoever dragged the card - that's who the achievement belongs to.
       try {
         const { error } = await supabase
           .from('achievements')
           .insert({
             task_id: task.id,
-            user_id: currentUser?.id || task.assigned,
+            user_id: achieverName,
             completed_at: new Date().toISOString()
           });
         if (error) {
@@ -1697,13 +1726,14 @@
         name: a.name || `Task #${a.task_id}`,
         desc: a.desc || '',
         completedAt: a.completed_at,
-        urgency: a.urgency || 'medium'
+        urgency: a.urgency || 'medium',
+        assignedTo: a.assignedTo || 'Unassigned'
       }));
 
       try {
         const { data: achievements, error } = await supabase
           .from('achievements')
-          .select('task_id, completed_at')
+          .select('task_id, completed_at, user_id')
           .order('completed_at', { ascending: false });
         
         if (error) {
@@ -1720,7 +1750,8 @@
                 name: originalTask?.name || `Task #${ach.task_id}`,
                 desc: originalTask?.desc || '',
                 completedAt: ach.completed_at,
-                urgency: originalTask?.urgency || 'medium'
+                urgency: originalTask?.urgency || 'medium',
+                assignedTo: ach.user_id || originalTask?.assigned || 'Unassigned'
               });
               seen.add(ach.task_id);
             }
@@ -1730,26 +1761,56 @@
       } catch (err) {
         console.error('❌ Error loading achievements from Supabase:', err);
       }
-      
+
+      const isManager = currentUser && currentUser.role === 'Manager';
+      const achievementCardHtml = (task) => `
+        <div class="achievement-card">
+          <div class="achievement-title">${esc(task.name)}</div>
+          ${task.desc ? `<div class="achievement-desc">${esc(task.desc)}</div>` : ''}
+          <div class="achievement-meta">
+            <span>Completed: ${new Date(task.completedAt).toLocaleDateString()}</span>
+          </div>
+        </div>
+      `;
+
+      let bodyHtml;
+      if (isManager) {
+        // Manager view: everyone's achievements, grouped by employee
+        if (achievedTasks.length === 0) {
+          bodyHtml = '<p>No achievements yet across the team.</p>';
+        } else {
+          const groups = {};
+          achievedTasks.forEach(t => {
+            const key = t.assignedTo || 'Unassigned';
+            if (!groups[key]) groups[key] = [];
+            groups[key].push(t);
+          });
+          const names = Object.keys(groups).sort((a, b) => groups[b].length - groups[a].length);
+          bodyHtml = names.map(name => `
+            <div class="achievement-group">
+              <div class="achievement-group-header">${esc(name)} <span class="achievement-group-count">${groups[name].length}</span></div>
+              ${groups[name].map(achievementCardHtml).join('')}
+            </div>
+          `).join('');
+        }
+      } else {
+        // Employee view: only their own achievements
+        const mine = achievedTasks.filter(t => t.assignedTo === (currentUser ? currentUser.name : ''));
+        bodyHtml = mine.length === 0
+          ? '<p>No achievements yet. Keep working! 🚀</p>'
+          : mine.map(achievementCardHtml).join('');
+      }
+
       // Show modal
       let modalHtml = `
         <div class="modal-overlay show" onclick="closeAchievementsModal()">
           <div class="modal-content" onclick="event.stopPropagation()">
             <div class="modal-header">
-              <h2>✨ Your Achievements</h2>
+              <h2>✨ ${isManager ? 'Team Achievements' : 'Your Achievements'}</h2>
               <button class="btn-close" onclick="closeAchievementsModal()">✕</button>
             </div>
             <div class="modal-body" style="max-height: 500px; overflow-y: auto;">
-              ${achievedTasks.length === 0 ? '<p>No achievements yet. Keep working! 🚀</p>' : ''}
-              ${achievedTasks.map(task => `
-                <div class="achievement-card">
-                  <div class="achievement-title">${task.name}</div>
-                  ${task.desc ? `<div class="achievement-desc">${task.desc}</div>` : ''}
-                  <div class="achievement-meta">
-                    <span>Completed: ${new Date(task.completedAt).toLocaleDateString()}</span>
-                  </div>
-                </div>
-              `).join('')}
+              ${bodyHtml}
             </div>
           </div>
         </div>
