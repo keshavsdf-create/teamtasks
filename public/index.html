@@ -1351,6 +1351,7 @@
     let taskCounter = 100;
 
     async function init() {
+      console.log('🔄 init() starting - loading data from Supabase...');
       // Load tasks from Supabase
       const { data: supabaseTasks, error: tasksError } = await supabase
         .from('tasks')
@@ -1401,22 +1402,27 @@
         tasks = sampleTasks;
       }
 
-      // Load employees from Supabase (async, but employees already have fallback values)
-      const { data: supabaseEmployees, error: empError } = await supabase
-        .from('users')
-        .select('*');
-      
-      if (!empError && supabaseEmployees && supabaseEmployees.length > 0) {
-        employees = supabaseEmployees.map(e => ({
-          id: e.id,
-          name: e.name,
-          role: e.role || 'Employee',
-          username: e.email?.split('@')[0] || e.name.toLowerCase(),
-          password: e.password || '1234'
-        }));
-        console.log('✅ Loaded employees from Supabase:', employees.length);
-      } else {
-        console.warn('⚠️ Supabase unavailable, using hardcoded fallback employees');
+      // Load employees from Supabase (or keep fallback if not available)
+      try {
+        const { data: supabaseEmployees, error: empError } = await supabase
+          .from('users')
+          .select('*');
+        
+        if (!empError && supabaseEmployees && supabaseEmployees.length > 0) {
+          employees = supabaseEmployees.map(e => ({
+            id: e.id,
+            name: e.name,
+            role: e.role || 'Employee',
+            username: e.email?.split('@')[0] || e.name.toLowerCase(),
+            password: e.password || '1234'
+          }));
+          console.log('✅ Loaded', employees.length, 'employees from Supabase');
+        } else {
+          console.warn('⚠️ Supabase empty or unavailable, keeping hardcoded employees');
+        }
+      } catch (err) {
+        console.error('❌ Error loading from Supabase:', err);
+        console.log('Keeping hardcoded fallback employees');
       }
       
       localStorage.setItem('teamtasks_employees', JSON.stringify(employees));
@@ -1509,7 +1515,14 @@
       applyRoleUI();
       renderAssignOptions();
       renderEmployeeList();
-      render();
+      
+      // Load data from Supabase after successful login
+      init().then(() => {
+        render();
+      }).catch(err => {
+        console.error('Error loading data after login:', err);
+        render(); // Still render with what we have
+      });
     }
 
     function handleLoginSubmit() {
@@ -1697,7 +1710,10 @@
     }
 
     function render() {
-      if (!currentUser) return;
+      if (!currentUser) {
+        showLogin();
+        return;
+      }
       renderStats();
       renderBoard();
       renderEmployeeList();
@@ -2582,10 +2598,8 @@
       if (e.key === 'Enter') handleLoginSubmit();
     });
 
-    (async () => {
-      await init();
-      renderDashboard();
-    })();
+    // Only show login initially - init() will be called AFTER successful login
+    renderDashboard();
   </script>
 </body>
 </html>
