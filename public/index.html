@@ -1392,21 +1392,27 @@
         tasks = sampleTasks;
       }
 
-      // Load employees from Supabase (or keep fallback if not available)
+      // Load employees from Supabase (merged with hardcoded fallback, never fully replaced)
       try {
         const { data: supabaseEmployees, error: empError } = await supabase
           .from('users')
           .select('*');
         
         if (!empError && supabaseEmployees && supabaseEmployees.length > 0) {
-          employees = supabaseEmployees.map(e => ({
+          const fromSupabase = supabaseEmployees.map(e => ({
             id: e.id,
             name: e.name,
             role: e.role || 'Employee',
             username: e.email?.split('@')[0] || e.name.toLowerCase(),
             password: e.password || '1234'
           }));
-          console.log('✅ Loaded', employees.length, 'employees from Supabase');
+          // Merge: Supabase entries win on username collision, but any hardcoded
+          // fallback employee (esp. 'manager') not present in Supabase is kept,
+          // so a partially-seeded Supabase table can never lock everyone out.
+          const supabaseUsernames = new Set(fromSupabase.map(e => e.username));
+          const keptFallback = employees.filter(e => !supabaseUsernames.has(e.username));
+          employees = [...fromSupabase, ...keptFallback];
+          console.log('✅ Loaded', fromSupabase.length, 'employees from Supabase, kept', keptFallback.length, 'fallback-only employees');
         } else {
           console.warn('⚠️ Supabase empty or unavailable, keeping hardcoded employees');
         }
@@ -1910,15 +1916,18 @@
         return;
       }
 
-      // Reload employees from Supabase
+      // Reload employees from Supabase, merged with fallback so 'manager' etc. can't be lost
       const { data: reloaded } = await supabase.from('users').select('*');
-      employees = reloaded.map(e => ({
+      const fromSupabase = (reloaded || []).map(e => ({
         id: e.id,
         name: e.name,
         role: e.role || 'Employee',
         username: e.email?.split('@')[0] || e.name.toLowerCase(),
         password: e.password || '1234'
       }));
+      const supabaseUsernames = new Set(fromSupabase.map(e => e.username));
+      const keptFallback = employees.filter(e => !supabaseUsernames.has(e.username));
+      employees = [...fromSupabase, ...keptFallback];
       persistEmployees();
 
       nameInput.value = '';
