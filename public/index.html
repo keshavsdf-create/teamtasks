@@ -706,11 +706,13 @@
       position: fixed;
       top: 0; left: 0; right: 0; bottom: 0;
       background: rgba(0, 0, 0, 0.5);
-      display: flex;
+      display: none;
       align-items: center;
       justify-content: center;
       z-index: 1000;
     }
+
+    .modal-overlay.show { display: flex; }
 
     .modal-content {
       background: white;
@@ -887,18 +889,6 @@
     }
 
     /* ===== MODAL ===== */
-    .modal-overlay {
-      display: none;
-      position: fixed;
-      top: 0; left: 0; right: 0; bottom: 0;
-      background: rgba(22,38,74,0.45);
-      z-index: 200;
-      align-items: center;
-      justify-content: center;
-      padding: 20px;
-    }
-
-    .modal-overlay.show { display: flex; }
 
     .modal {
       background: var(--card-bg);
@@ -1681,7 +1671,7 @@
       
       // Show modal
       let modalHtml = `
-        <div class="modal-overlay" onclick="closeAchievementsModal()">
+        <div class="modal-overlay show" onclick="closeAchievementsModal()">
           <div class="modal-content" onclick="event.stopPropagation()">
             <div class="modal-header">
               <h2>✨ Your Achievements</h2>
