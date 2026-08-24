@@ -1529,12 +1529,25 @@
     function handleLoginSubmit() {
       const username = document.getElementById('loginUsername').value.trim().toLowerCase();
       const password = document.getElementById('loginPassword').value;
-      const emp = employees.find(e => e.username.toLowerCase() === username && e.password === password);
       const errEl = document.getElementById('loginError');
 
+      // Debug: Log available employees
+      console.log('Employees loaded:', employees.length);
+      console.log('Employees:', employees.map(e => ({name: e.name, username: e.username})));
+      console.log('Attempting login with:', {username, password});
+
+      const emp = employees.find(e => {
+        const empUsername = (e.username || '').toLowerCase().trim();
+        const match = empUsername === username && e.password === password;
+        console.log(`Checking ${empUsername} == ${username} && ${e.password} == ${password} => ${match}`);
+        return match;
+      });
+
       if (!emp) {
-        errEl.textContent = 'Incorrect ID or password.';
+        const availableIds = employees.map(e => e.username).join(', ');
+        errEl.textContent = `Invalid credentials. Available IDs: ${availableIds || 'None loaded'}`;
         errEl.classList.add('show');
+        console.error('Login failed. Available IDs:', availableIds);
         return;
       }
 
