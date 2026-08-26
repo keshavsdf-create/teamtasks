@@ -1485,8 +1485,6 @@
       const codes = tasks.map(t => t.code).filter(Boolean).map(c => parseInt(c.replace('T-', ''), 10)).filter(n => !isNaN(n));
       taskCounter = codes.length ? Math.max(...codes) : 100;
       renderAssignOptions();
-
-      checkSession();
     }
 
     function slugify(name) {
@@ -2204,7 +2202,7 @@
       const empTasks = tasks.filter(t => t.assigned === emp.name);
       const container = document.getElementById('dashColumns');
 
-      container.innerHTML = STATUSES.map(s => {
+      container.innerHTML = STATUSES.filter(s => s.key !== 'achievement').map(s => {
         const colTasks = empTasks.filter(t => t.status === s.key);
         const rows = colTasks.length === 0
           ? `<div class="dash-empty">Not currently working on anything here</div>`
@@ -2495,7 +2493,14 @@
     function deleteTask() {
       if (!editingId) return;
       if (!confirm('Delete this task?')) return;
-      tasks = tasks.filter(t => t.id !== editingId);
+      const deletedTask = tasks.find(t => String(t.id) === String(editingId));
+      tasks = tasks.filter(t => String(t.id) !== String(editingId));
+      // Also remove it from Supabase so it doesn't reappear on next load
+      if (deletedTask) {
+        supabase.from('tasks').delete().eq('id', deletedTask.id).then(({ error }) => {
+          if (error) console.error('❌ Supabase task delete failed:', error.message);
+        });
+      }
       persist();
       render();
       closeModal();
@@ -2728,8 +2733,10 @@
       if (e.key === 'Enter') handleLoginSubmit();
     });
 
-    // Only show login initially - init() will be called AFTER successful login
-    renderDashboard();
+    // Entry point: check for a remembered/active session (using the instantly-available
+    // hardcoded fallback employees), then showApp()/init() takes it from there and
+    // loads fresh data from Supabase in the background. If no session, show login.
+    checkSession();
   </script>
 </body>
 </html>
