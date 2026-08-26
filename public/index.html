@@ -2189,6 +2189,14 @@
 
       employees = employees.filter(e => e.id !== editingEmployeeId);
       persistEmployees();
+
+      // Also remove it from Supabase so it doesn't get merged back in on next load
+      // (hardcoded fallback accounts like 'manager' have non-UUID ids and were never
+      // in this table, so this is a harmless no-op for them)
+      supabase.from('users').delete().eq('id', emp.id).then(({ error }) => {
+        if (error) console.error('❌ Supabase employee delete failed:', error.message);
+      });
+
       renderAssignOptions();
       renderEmployeeList();
       render();
