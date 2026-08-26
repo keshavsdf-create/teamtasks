@@ -675,31 +675,86 @@
       background: #F0FBFC;
     }
 
-    /* Achievement Column */
-    .column-achievement {
-      flex: 0 0 100px;
-      min-width: 100px;
-      width: 100px;
-      padding: 10px 8px;
-      background: linear-gradient(135deg, #FEF3C7 0%, #FCD34D 100%);
-      border: 2px solid #FBBF24;
+    /* Achievement Column — golden & shiny, same footprint as a normal column */
+    .column.column-achievement-gold {
+      background: linear-gradient(135deg, #FFF7DB 0%, #FDE9A8 50%, #FFF7DB 100%);
+      border: 1px solid #F0C960;
+      box-shadow: 0 0 0 1px rgba(255, 215, 90, 0.35), 0 8px 22px rgba(214, 158, 46, 0.22);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .column.column-achievement-gold::before {
+      content: '';
+      position: absolute;
+      top: 0; left: -60%;
+      width: 45%; height: 100%;
+      background: linear-gradient(115deg, transparent 0%, rgba(255, 255, 255, 0.65) 50%, transparent 100%);
+      animation: achievement-shine 4.5s ease-in-out infinite;
+      pointer-events: none;
+    }
+
+    @keyframes achievement-shine {
+      0% { left: -60%; }
+      55% { left: 130%; }
+      100% { left: 130%; }
+    }
+
+    .column.column-achievement-gold .column-header span:first-child {
+      color: #8A6A00;
+      text-shadow: 0 1px 0 rgba(255, 255, 255, 0.6);
+    }
+
+    .column.column-achievement-gold .achievement-count {
+      background: linear-gradient(135deg, #F0B429, #D89000);
+      color: #4A2E00;
+      box-shadow: 0 1px 3px rgba(180, 120, 0, 0.4);
+    }
+
+    .achievement-line {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(255, 255, 255, 0.65);
+      border: 1px solid rgba(240, 201, 96, 0.6);
+      border-radius: 10px;
+      padding: 6px 8px;
+      font-size: 12px;
+      color: #6B4E00;
+    }
+
+    .achievement-line-icon { flex-shrink: 0; }
+
+    .achievement-line-name {
+      flex: 1 1 auto;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-weight: 600;
+    }
+
+    .achievement-line-meta {
+      flex-shrink: 0;
+      font-size: 10px;
+      color: #A9832E;
+      white-space: nowrap;
+    }
+
+    .achievement-line-btn {
+      flex-shrink: 0;
+      border: none;
+      background: rgba(255, 255, 255, 0.7);
+      border-radius: 6px;
+      width: 18px; height: 18px;
+      font-size: 11px;
+      line-height: 1;
       cursor: pointer;
+      color: #6B4E00;
     }
 
-    .column-achievement .column-header {
-      margin-bottom: 8px;
-    }
-
-    .achievement-header span {
-      font-size: 14px !important;
-    }
-
-    .achievement-count {
-      background: #D97706 !important;
-      font-size: 11px !important;
-      width: 20px !important;
-      height: 20px !important;
-    }
+    .achievement-line-btn:hover { background: rgba(255, 255, 255, 0.95); }
+    .achievement-line-btn.danger { color: #B42318; }
 
     /* Modal Styles */
     .modal-overlay {
@@ -763,62 +818,6 @@
       padding: 20px 24px;
       overflow-y: auto;
       flex: 1;
-    }
-
-    .achievement-card {
-      background: linear-gradient(135deg, #F0FDF4 0%, #DCFCE7 100%);
-      border-left: 4px solid #22C55E;
-      border-radius: 12px;
-      padding: 16px;
-      margin-bottom: 12px;
-      transition: transform 0.2s ease;
-    }
-
-    .achievement-card:hover {
-      transform: translateX(4px);
-    }
-
-    .achievement-title {
-      font-weight: 700;
-      font-size: 16px;
-      color: var(--navy);
-      margin-bottom: 6px;
-    }
-
-    .achievement-desc {
-      font-size: 14px;
-      color: var(--label-gray);
-      margin-bottom: 8px;
-    }
-
-    .achievement-meta {
-      font-size: 12px;
-      color: var(--label-gray);
-      font-style: italic;
-    }
-
-    .achievement-group { margin-bottom: 20px; }
-    .achievement-group:last-child { margin-bottom: 0; }
-
-    .achievement-group-header {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      font-weight: 700;
-      font-size: 14px;
-      color: var(--navy);
-      margin-bottom: 10px;
-      padding-bottom: 6px;
-      border-bottom: 1px solid #E4ECF7;
-    }
-
-    .achievement-group-count {
-      background: #FBBF24;
-      color: #78350F;
-      font-size: 11px;
-      font-weight: 700;
-      padding: 2px 8px;
-      border-radius: 10px;
     }
 
     /* ===== TASK CARDS ===== */
@@ -1331,7 +1330,7 @@
       { key: 'need-help', label: 'Need Help', color: '#EF4444' },
       { key: 'hold', label: 'Hold', color: '#64748B' },
       { key: 'future', label: 'Future', color: '#6366F1' },
-      { key: 'achievement', label: '✨ Achievements', color: '#FBBF24', minified: true }
+      { key: 'achievement', label: '✨ Achievements', color: '#FBBF24' }
     ];
     const STATUS_COLOR = Object.fromEntries(STATUSES.map(s => [s.key, s.color]));
 
@@ -1347,6 +1346,7 @@
     };
 
     let tasks = [];
+    let achievements = [];
     let editingId = null;
     let employees = [
       { id: '1', name: 'Manager Admin', role: 'Manager', username: 'manager', password: '1234', email: 'manager@teamtasks.com' },
@@ -1470,7 +1470,7 @@
           }
         }
 
-        if (needsMigration || !savedEmp) persistEmployees();
+        if (needsMigration) persistEmployees();
         localStorage.setItem('teamtasks_creds_migrated', '1');
       } else {
         // Still backfill in the rare case an employee somehow has no credentials at all
@@ -1485,6 +1485,54 @@
       const codes = tasks.map(t => t.code).filter(Boolean).map(c => parseInt(c.replace('T-', ''), 10)).filter(n => !isNaN(n));
       taskCounter = codes.length ? Math.max(...codes) : 100;
       renderAssignOptions();
+
+      await loadAchievements();
+    }
+
+    async function loadAchievements() {
+      // Local fallback first (always available, e.g. if Supabase is unreachable)
+      const localAchievements = JSON.parse(localStorage.getItem('teamtasks_achievements') || '[]');
+      let result = localAchievements.map(a => ({
+        id: a.task_id,
+        name: a.name || `Task #${a.task_id}`,
+        desc: a.desc || '',
+        completedAt: a.completed_at,
+        urgency: a.urgency || 'medium',
+        assignedTo: a.assignedTo || 'Unassigned'
+      }));
+
+      try {
+        const { data, error } = await supabase
+          .from('achievements')
+          .select('task_id, title, description, urgency, user_id, completed_at')
+          .order('completed_at', { ascending: false });
+
+        if (error) {
+          console.error('❌ Supabase achievements select failed:', error.message);
+          console.warn('Showing locally-saved achievements only. This is likely a Row-Level Security policy issue.');
+        } else if (data && data.length > 0) {
+          // Merge with local, de-duplicating by task_id
+          const seen = new Set(result.map(t => t.id));
+          data.forEach(ach => {
+            if (!seen.has(ach.task_id)) {
+              result.push({
+                id: ach.task_id,
+                name: ach.title || `Task #${ach.task_id}`,
+                desc: ach.description || '',
+                completedAt: ach.completed_at,
+                urgency: ach.urgency || 'medium',
+                assignedTo: ach.user_id || 'Unassigned'
+              });
+              seen.add(ach.task_id);
+            }
+          });
+          result.sort((a, b) => new Date(b.completedAt) - new Date(a.completedAt));
+        }
+      } catch (err) {
+        console.error('❌ Error loading achievements from Supabase:', err);
+      }
+
+      achievements = result;
     }
 
     function slugify(name) {
@@ -1659,6 +1707,7 @@
 
     async function moveToAchievement(task) {
       const achieverName = task.assigned || 'Unassigned';
+      const completedAt = new Date().toISOString();
 
       // Always keep a local snapshot as a fallback (works even if Supabase blocks writes)
       const localAchievements = JSON.parse(localStorage.getItem('teamtasks_achievements') || '[]');
@@ -1668,20 +1717,36 @@
         desc: task.desc,
         urgency: task.urgency,
         assignedTo: achieverName,
-        completed_at: new Date().toISOString()
+        completed_at: completedAt
       });
       localStorage.setItem('teamtasks_achievements', JSON.stringify(localAchievements));
+
+      // Show it immediately without waiting on a re-fetch
+      achievements.unshift({
+        id: task.id,
+        name: task.name,
+        desc: task.desc,
+        urgency: task.urgency,
+        assignedTo: achieverName,
+        completedAt: completedAt
+      });
 
       // Also try to save to Supabase (best-effort).
       // user_id here holds the achiever's display name (the task's assignee),
       // not whoever dragged the card - that's who the achievement belongs to.
+      // title/description/urgency are duplicated here because the task row
+      // itself gets deleted below, so this is the only surviving copy once
+      // other browsers/devices load achievements straight from Supabase.
       try {
         const { error } = await supabase
           .from('achievements')
           .insert({
             task_id: task.id,
             user_id: achieverName,
-            completed_at: new Date().toISOString()
+            completed_at: completedAt,
+            title: task.name,
+            description: task.desc,
+            urgency: task.urgency
           });
         if (error) {
           console.error('❌ Supabase achievements insert failed:', error.message);
@@ -1690,7 +1755,7 @@
       } catch (err) {
         console.error('❌ Error saving achievement to Supabase:', err);
       }
-      
+
       // Remove the task row from Supabase's tasks table entirely so it
       // doesn't reappear on next load (its old status would otherwise
       // still match the "not achievement" filter used when loading tasks)
@@ -1708,118 +1773,65 @@
 
       // Remove from main tasks array
       tasks = tasks.filter(t => t.id !== task.id);
-      
+
       // Save changes
       await persist();
       render();
     }
 
-    async function showAchievementsModal() {
-      // Load local fallback achievements first (always available)
-      const localAchievements = JSON.parse(localStorage.getItem('teamtasks_achievements') || '[]');
+    // Manager-only: pull an archived task back onto the board. The original task
+    // row was deleted from Supabase when it was archived, so only the fields kept
+    // on the achievement record (name/desc/urgency/assignee) can be restored —
+    // it comes back as a fresh To Do card the manager can then move anywhere.
+    async function cancelAchievement(achId) {
+      if (!currentUser || currentUser.role !== 'Manager') return;
+      const ach = achievements.find(a => a.id === achId);
+      if (!ach) return;
+      if (!confirm(`Move "${ach.name}" back to the board?`)) return;
 
-      // Try to also load from Supabase (best-effort)
-      let achievedTasks = localAchievements.map(a => ({
-        id: a.task_id,
-        name: a.name || `Task #${a.task_id}`,
-        desc: a.desc || '',
-        completedAt: a.completed_at,
-        urgency: a.urgency || 'medium',
-        assignedTo: a.assignedTo || 'Unassigned'
-      }));
+      tasks.push({
+        id: crypto.randomUUID(),
+        code: `T-${++taskCounter}`,
+        name: ach.name,
+        desc: ach.desc || '',
+        assigned: ach.assignedTo || 'Unassigned',
+        tagged: [],
+        deadline: null,
+        urgency: ach.urgency || 'medium',
+        status: 'todo',
+        createdBy: currentUser.name,
+        voiceNotes: [null, null],
+        attachments: []
+      });
 
-      try {
-        const { data: achievements, error } = await supabase
-          .from('achievements')
-          .select('task_id, completed_at, user_id')
-          .order('completed_at', { ascending: false });
-        
-        if (error) {
-          console.error('❌ Supabase achievements select failed:', error.message);
-          console.warn('Showing locally-saved achievements only. This is likely a Row-Level Security policy issue.');
-        } else if (achievements && achievements.length > 0) {
-          // Merge Supabase results with local, de-duplicating by task_id
-          const seen = new Set(achievedTasks.map(t => t.id));
-          achievements.forEach(ach => {
-            if (!seen.has(ach.task_id)) {
-              const originalTask = tasks.find(t => t.id === ach.task_id);
-              achievedTasks.push({
-                id: ach.task_id,
-                name: originalTask?.name || `Task #${ach.task_id}`,
-                desc: originalTask?.desc || '',
-                completedAt: ach.completed_at,
-                urgency: originalTask?.urgency || 'medium',
-                assignedTo: ach.user_id || originalTask?.assigned || 'Unassigned'
-              });
-              seen.add(ach.task_id);
-            }
-          });
-          achievedTasks.sort((a, b) => new Date(b.completedAt) - new Date(a.completedAt));
-        }
-      } catch (err) {
-        console.error('❌ Error loading achievements from Supabase:', err);
-      }
-
-      const isManager = currentUser && currentUser.role === 'Manager';
-      const achievementCardHtml = (task) => `
-        <div class="achievement-card">
-          <div class="achievement-title">${esc(task.name)}</div>
-          ${task.desc ? `<div class="achievement-desc">${esc(task.desc)}</div>` : ''}
-          <div class="achievement-meta">
-            <span>Completed: ${new Date(task.completedAt).toLocaleDateString()}</span>
-          </div>
-        </div>
-      `;
-
-      let bodyHtml;
-      if (isManager) {
-        // Manager view: everyone's achievements, grouped by employee
-        if (achievedTasks.length === 0) {
-          bodyHtml = '<p>No achievements yet across the team.</p>';
-        } else {
-          const groups = {};
-          achievedTasks.forEach(t => {
-            const key = t.assignedTo || 'Unassigned';
-            if (!groups[key]) groups[key] = [];
-            groups[key].push(t);
-          });
-          const names = Object.keys(groups).sort((a, b) => groups[b].length - groups[a].length);
-          bodyHtml = names.map(name => `
-            <div class="achievement-group">
-              <div class="achievement-group-header">${esc(name)} <span class="achievement-group-count">${groups[name].length}</span></div>
-              ${groups[name].map(achievementCardHtml).join('')}
-            </div>
-          `).join('');
-        }
-      } else {
-        // Employee view: only their own achievements
-        const mine = achievedTasks.filter(t => t.assignedTo === (currentUser ? currentUser.name : ''));
-        bodyHtml = mine.length === 0
-          ? '<p>No achievements yet. Keep working! 🚀</p>'
-          : mine.map(achievementCardHtml).join('');
-      }
-
-      // Show modal
-      let modalHtml = `
-        <div class="modal-overlay show" onclick="closeAchievementsModal()">
-          <div class="modal-content" onclick="event.stopPropagation()">
-            <div class="modal-header">
-              <h2>✨ ${isManager ? 'Team Achievements' : 'Your Achievements'}</h2>
-              <button class="btn-close" onclick="closeAchievementsModal()">✕</button>
-            </div>
-            <div class="modal-body" style="max-height: 500px; overflow-y: auto;">
-              ${bodyHtml}
-            </div>
-          </div>
-        </div>
-      `;
-      
-      document.body.insertAdjacentHTML('beforeend', modalHtml);
+      await removeAchievementRecord(ach);
+      await persist();
+      render();
     }
 
-    function closeAchievementsModal() {
-      const overlay = document.querySelector('.modal-overlay');
-      if (overlay) overlay.remove();
+    // Manager-only: permanently remove an archived task, no restore.
+    async function deleteAchievement(achId) {
+      if (!currentUser || currentUser.role !== 'Manager') return;
+      const ach = achievements.find(a => a.id === achId);
+      if (!ach) return;
+      if (!confirm(`Permanently delete "${ach.name}" from Achievements? This can't be undone.`)) return;
+
+      await removeAchievementRecord(ach);
+      render();
+    }
+
+    async function removeAchievementRecord(ach) {
+      achievements = achievements.filter(a => a.id !== ach.id);
+
+      const local = JSON.parse(localStorage.getItem('teamtasks_achievements') || '[]');
+      localStorage.setItem('teamtasks_achievements', JSON.stringify(local.filter(a => a.task_id !== ach.id)));
+
+      try {
+        const { error } = await supabase.from('achievements').delete().eq('task_id', ach.id);
+        if (error) console.error('❌ Supabase achievement delete failed:', error.message);
+      } catch (err) {
+        console.error('❌ Error deleting achievement from Supabase:', err);
+      }
     }
 
     function render() {
@@ -2263,66 +2275,79 @@
       board.innerHTML = '';
       const vTasks = visibleTasks();
 
+      const isManager = currentUser && currentUser.role === 'Manager';
+
       STATUSES.forEach(s => {
-        const colTasks = vTasks.filter(t => t.status === s.key);
-        const isEmpty = colTasks.length === 0;
         const col = document.createElement('div');
-        
-        // Special handling for achievement column
+
         if (s.key === 'achievement') {
-          const achievedCount = JSON.parse(localStorage.getItem('teamtasks_achievements') || '[]').length;
-          col.className = 'column column-achievement column-collapsed';
-          col.dataset.status = s.key;
-          col.innerHTML = `
-            <div class="column-header achievement-header">
-              <span style="cursor: pointer; font-size: 18px;" onclick="showAchievementsModal()" title="Click to see achievements">${s.label}</span>
-              <span class="column-count achievement-count">${achievedCount}</span>
-            </div>
-            <div class="column-body" data-status="${s.key}">
-            </div>
-          `;
-        } else {
-          col.className = 'column' + (isEmpty ? ' column-collapsed' : '');
+          // Manager sees everyone's achievements; employees see only their own
+          const visibleAchievements = achievements.filter(a => isManager || a.assignedTo === (currentUser ? currentUser.name : ''));
+          const isEmptyAch = visibleAchievements.length === 0;
+          col.className = 'column column-achievement-gold' + (isEmptyAch ? ' column-collapsed' : '');
           col.dataset.status = s.key;
           col.innerHTML = `
             <div class="column-header">
               <span>${s.label}</span>
-              <span class="column-count">${colTasks.length}</span>
+              <span class="column-count achievement-count">${visibleAchievements.length}</span>
             </div>
             <div class="column-body" data-status="${s.key}">
-              ${isEmpty ? '<div class="empty-hint">Drop tasks here</div>' : ''}
+              ${isEmptyAch ? '<div class="empty-hint">Nothing archived yet</div>' : ''}
             </div>
           `;
+          const body = col.querySelector('.column-body');
+          visibleAchievements.forEach(a => body.appendChild(makeAchievementLine(a, isManager)));
+          board.appendChild(col);
+          attachColumnDropHandlers(col, s);
+          return;
         }
+
+        const colTasks = vTasks.filter(t => t.status === s.key);
+        const isEmpty = colTasks.length === 0;
+        col.className = 'column' + (isEmpty ? ' column-collapsed' : '');
+        col.dataset.status = s.key;
+        col.innerHTML = `
+          <div class="column-header">
+            <span>${s.label}</span>
+            <span class="column-count">${colTasks.length}</span>
+          </div>
+          <div class="column-body" data-status="${s.key}">
+            ${isEmpty ? '<div class="empty-hint">Drop tasks here</div>' : ''}
+          </div>
+        `;
 
         const body = col.querySelector('.column-body');
-        if (s.key !== 'achievement') {
-          colTasks.forEach(t => body.appendChild(makeCard(t)));
-        }
-
-        col.addEventListener('dragover', e => { e.preventDefault(); col.classList.add('drag-over'); });
-        col.addEventListener('dragleave', () => col.classList.remove('drag-over'));
-        col.addEventListener('drop', e => {
-          e.preventDefault();
-          col.classList.remove('drag-over');
-          const id = e.dataTransfer.getData('text/plain');
-          const task = tasks.find(t => String(t.id) === String(id));
-          if (task && task.status !== s.key) {
-            if (s.key === 'achievement') {
-              // Move to achievements
-              moveToAchievement(task);
-            } else {
-              task.status = s.key;
-              if (s.key === 'approval' && !task.approvalStatus) {
-                task.approvalStatus = 'pending';
-              }
-              persist();
-              render();
-            }
-          }
-        });
+        colTasks.forEach(t => body.appendChild(makeCard(t)));
 
         board.appendChild(col);
+        attachColumnDropHandlers(col, s);
+      });
+    }
+
+    function attachColumnDropHandlers(col, s) {
+      col.addEventListener('dragover', e => { e.preventDefault(); col.classList.add('drag-over'); });
+      col.addEventListener('dragleave', () => col.classList.remove('drag-over'));
+      col.addEventListener('drop', e => {
+        e.preventDefault();
+        col.classList.remove('drag-over');
+        const id = e.dataTransfer.getData('text/plain');
+        const task = tasks.find(t => String(t.id) === String(id));
+        if (task && task.status !== s.key) {
+          if (s.key === 'achievement') {
+            // Archiving deletes the task permanently, so confirm before it happens
+            // instead of after (there's no undo once moveToAchievement runs).
+            if (confirm(`Archive "${task.name}" to Achievements? This can't be undone.`)) {
+              moveToAchievement(task);
+            }
+          } else {
+            task.status = s.key;
+            if (s.key === 'approval' && !task.approvalStatus) {
+              task.approvalStatus = 'pending';
+            }
+            persist();
+            render();
+          }
+        }
       });
     }
 
@@ -2379,6 +2404,34 @@
       card.addEventListener('click', () => openEditModal(task.id));
 
       return card;
+    }
+
+    function makeAchievementLine(a, isManager) {
+      const line = document.createElement('div');
+      line.className = 'achievement-line';
+      line.draggable = false;
+      line.title = a.desc || a.name;
+
+      const dateStr = a.completedAt ? new Date(a.completedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '';
+      const metaStr = isManager ? `${esc(a.assignedTo)} · ${dateStr}` : dateStr;
+
+      line.innerHTML = `
+        <span class="achievement-line-icon">🏆</span>
+        <span class="achievement-line-name">${esc(a.name)}</span>
+        <span class="achievement-line-meta">${metaStr}</span>
+        ${isManager ? `
+          <button type="button" class="achievement-line-btn" title="Move back to board">↩</button>
+          <button type="button" class="achievement-line-btn danger" title="Delete permanently">✕</button>
+        ` : ''}
+      `;
+
+      if (isManager) {
+        const [cancelBtn, deleteBtn] = line.querySelectorAll('.achievement-line-btn');
+        cancelBtn.addEventListener('click', e => { e.stopPropagation(); cancelAchievement(a.id); });
+        deleteBtn.addEventListener('click', e => { e.stopPropagation(); deleteAchievement(a.id); });
+      }
+
+      return line;
     }
 
     function openAddModal() {
