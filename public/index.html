@@ -2123,47 +2123,48 @@
 
     function renderEmployeeList() {
       const list = document.getElementById('employeeList');
-      if (!list) return;
-      const managers = employees.filter(e => e.role === 'Manager');
-      const others = employees.filter(e => e.role !== 'Manager');
+      if (!list || !currentUser) return;
 
-      const me = managers[0];
+      const isManager = currentUser.role === 'Manager';
+      // Look up by id (not "the first manager in the array") so this is always
+      // the person actually logged in, not whichever manager happens to be first.
+      const me = employees.find(e => e.id === currentUser.id) || currentUser;
+
       const headerAv = document.getElementById('headerAvatar');
-      if (headerAv && me) {
+      if (headerAv) {
         headerAv.outerHTML = me.photo
           ? `<img id="headerAvatar" src="${me.photo}" style="width:28px;height:28px;border-radius:50%;object-fit:cover;">`
           : `<div id="headerAvatar" class="avatar-circle" style="width:28px;height:28px;font-size:11px;background:${avatarColor(me.name)}">${initials(me.name)}</div>`;
       }
 
-      const meHtml = managers.map(emp => {
+      const rowHtml = (emp, isMe) => {
         const count = tasks.filter(t => t.assigned === emp.name).length;
         return `
-          <div class="employee-row employee-row-me" onclick="openEmployeeProfile('${emp.id}')">
+          <div class="employee-row${isMe ? ' employee-row-me' : ''}" onclick="openEmployeeProfile('${emp.id}')">
             ${avatarHTML(emp.name, 32, 11)}
             <div>
-              <div class="employee-row-name">${esc(emp.name)} <span class="me-tag">Me</span></div>
+              <div class="employee-row-name">${esc(emp.name)} ${isMe ? '<span class="me-tag">Me</span>' : ''}</div>
               <div class="employee-row-role">${esc(emp.role)}</div>
             </div>
             <div class="employee-row-count">${count} task${count === 1 ? '' : 's'}</div>
           </div>
         `;
-      }).join('');
+      };
 
-      const othersHtml = others.map(emp => {
-        const count = tasks.filter(t => t.assigned === emp.name).length;
-        return `
-          <div class="employee-row" onclick="openEmployeeProfile('${emp.id}')">
-            ${avatarHTML(emp.name, 32, 11)}
-            <div>
-              <div class="employee-row-name">${esc(emp.name)}</div>
-              <div class="employee-row-role">${esc(emp.role)}</div>
-            </div>
-            <div class="employee-row-count">${count} task${count === 1 ? '' : 's'}</div>
-          </div>
-        `;
-      }).join('') || '<div style="font-size:12px;color:var(--label-gray);padding:8px 6px;">No employees yet.</div>';
+      const meHtml = rowHtml(me, true);
 
-      list.innerHTML = meHtml + (meHtml ? '<div class="team-dropdown-divider"></div>' : '') + othersHtml;
+      // Employees only ever see their own row - no visibility into teammates'
+      // profiles, task counts, or dashboards.
+      if (!isManager) {
+        list.innerHTML = meHtml;
+        return;
+      }
+
+      const others = employees.filter(e => e.id !== me.id);
+      const othersHtml = others.map(emp => rowHtml(emp, false)).join('')
+        || '<div style="font-size:12px;color:var(--label-gray);padding:8px 6px;">No employees yet.</div>';
+
+      list.innerHTML = meHtml + '<div class="team-dropdown-divider"></div>' + othersHtml;
     }
 
     let empIdManuallyEdited = false;
@@ -2283,6 +2284,13 @@
     let tempProfilePhoto = null;
 
     function openEmployeeProfile(empId) {
+      // Belt-and-suspenders: the team list no longer renders other people's rows
+      // for a non-manager, but guard the function itself too in case it's ever
+      // reached another way - employees can only ever open their own profile.
+      if (currentUser && currentUser.role !== 'Manager' && empId !== currentUser.id) {
+        empId = currentUser.id;
+      }
+
       const emp = employees.find(e => e.id === empId);
       if (!emp) return;
 
@@ -2446,6 +2454,9 @@
 
     // ===== EMPLOYEE DASHBOARD (read-only, per person) =====
     function openEmployeeDashboard() {
+      if (currentUser && currentUser.role !== 'Manager' && editingEmployeeId !== currentUser.id) {
+        editingEmployeeId = currentUser.id;
+      }
       const emp = employees.find(e => e.id === editingEmployeeId);
       if (!emp) return;
 
