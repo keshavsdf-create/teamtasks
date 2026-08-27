@@ -721,7 +721,16 @@
       padding: 6px 8px;
       font-size: 12px;
       color: #6B4E00;
+      cursor: pointer;
+      transition: transform 0.15s ease, background 0.15s ease;
     }
+
+    .achievement-line:hover {
+      background: rgba(255, 255, 255, 0.9);
+      transform: translateX(2px);
+    }
+
+    .achievement-line.dragging { opacity: 0.5; }
 
     .achievement-line-icon { flex-shrink: 0; }
 
@@ -1779,17 +1788,20 @@
       render();
     }
 
-    // Manager-only: pull an archived task back onto the board. The original task
-    // row was deleted from Supabase when it was archived, so only the fields kept
-    // on the achievement record (name/desc/urgency/assignee) can be restored —
-    // it comes back as a fresh To Do card the manager can then move anywhere.
-    async function cancelAchievement(achId) {
+    // Manager-only: pull an archived task back onto the board, into whichever
+    // column they choose (the ↩ button defaults to To Do; dragging the card
+    // onto a specific column restores it straight into that one). The original
+    // task row was deleted from Supabase when it was archived, so only the
+    // fields kept on the achievement record (name/desc/urgency/assignee) can
+    // be restored — it comes back as a fresh card.
+    async function restoreAchievementTo(achId, status, statusLabel) {
       if (!currentUser || currentUser.role !== 'Manager') return;
       const ach = achievements.find(a => a.id === achId);
       if (!ach) return;
-      if (!confirm(`Move "${ach.name}" back to the board?`)) return;
+      const label = statusLabel || (STATUSES.find(s => s.key === status) || {}).label || status;
+      if (!confirm(`Move "${ach.name}" to ${label}?`)) return;
 
-      tasks.push({
+      const restored = {
         id: crypto.randomUUID(),
         code: `T-${++taskCounter}`,
         name: ach.name,
@@ -1798,15 +1810,21 @@
         tagged: [],
         deadline: null,
         urgency: ach.urgency || 'medium',
-        status: 'todo',
+        status,
         createdBy: currentUser.name,
         voiceNotes: [null, null],
         attachments: []
-      });
+      };
+      if (status === 'approval') restored.approvalStatus = 'pending';
+      tasks.push(restored);
 
       await removeAchievementRecord(ach);
       await persist();
       render();
+    }
+
+    async function cancelAchievement(achId) {
+      await restoreAchievementTo(achId, 'todo', 'To Do');
     }
 
     // Manager-only: permanently remove an archived task, no restore.
@@ -2339,6 +2357,12 @@
         e.preventDefault();
         col.classList.remove('drag-over');
         const id = e.dataTransfer.getData('text/plain');
+
+        if (id.startsWith('ach:')) {
+          if (s.key !== 'achievement') restoreAchievementTo(id.slice(4), s.key, s.label);
+          return;
+        }
+
         const task = tasks.find(t => String(t.id) === String(id));
         if (task && task.status !== s.key) {
           if (s.key === 'achievement') {
@@ -2417,8 +2441,10 @@
     function makeAchievementLine(a, isManager) {
       const line = document.createElement('div');
       line.className = 'achievement-line';
-      line.draggable = false;
-      line.title = a.desc || a.name;
+      // Only a manager can pull an archived task back onto the board, so only
+      // they get a drag handle here — everyone else can look but not move it.
+      line.draggable = isManager;
+      line.title = isManager ? 'Click for details · drag to move to another column' : (a.desc || a.name);
 
       const dateStr = a.completedAt ? new Date(a.completedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '';
       const metaStr = isManager ? `${esc(a.assignedTo)} · ${dateStr}` : dateStr;
@@ -2433,13 +2459,60 @@
         ` : ''}
       `;
 
+      line.addEventListener('click', () => openAchievementDetail(a.id));
+
       if (isManager) {
         const [cancelBtn, deleteBtn] = line.querySelectorAll('.achievement-line-btn');
         cancelBtn.addEventListener('click', e => { e.stopPropagation(); cancelAchievement(a.id); });
         deleteBtn.addEventListener('click', e => { e.stopPropagation(); deleteAchievement(a.id); });
+
+        line.addEventListener('dragstart', e => {
+          // Prefixed so column drop handlers can tell an archived-card drag
+          // apart from a normal task-card drag (achievement ids aren't in `tasks`).
+          e.dataTransfer.setData('text/plain', 'ach:' + a.id);
+          line.classList.add('dragging');
+        });
+        line.addEventListener('dragend', () => line.classList.remove('dragging'));
       }
 
       return line;
+    }
+
+    function openAchievementDetail(achId) {
+      const a = achievements.find(x => x.id === achId);
+      if (!a) return;
+      const isManager = currentUser && currentUser.role === 'Manager';
+
+      closeAchievementDetail();
+      const html = `
+        <div class="modal-overlay show" id="achievementDetailOverlay" onclick="closeAchievementDetail()">
+          <div class="modal-content" style="max-width:420px;" onclick="event.stopPropagation()">
+            <div class="modal-header">
+              <h2>🏆 ${esc(a.name)}</h2>
+              <button class="btn-close" onclick="closeAchievementDetail()">✕</button>
+            </div>
+            <div class="modal-body">
+              ${a.desc ? `<p style="margin:0 0 14px;color:var(--label-gray);">${esc(a.desc)}</p>` : ''}
+              <p style="margin:0 0 6px;font-size:13px;"><strong>Assigned to:</strong> ${esc(a.assignedTo)}</p>
+              <p style="margin:0 0 6px;font-size:13px;"><strong>Urgency:</strong> ${esc(a.urgency)}</p>
+              <p style="margin:0 0 16px;font-size:13px;"><strong>Archived:</strong> ${a.completedAt ? new Date(a.completedAt).toLocaleString() : 'Unknown'}</p>
+              ${isManager ? `
+                <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                  <button type="button" class="btn btn-outline btn-small" onclick="cancelAchievement('${a.id}'); closeAchievementDetail();">↩ Move back to board</button>
+                  <button type="button" class="btn btn-delete btn-small" onclick="deleteAchievement('${a.id}'); closeAchievementDetail();">✕ Delete permanently</button>
+                </div>
+                <div style="margin-top:10px;font-size:12px;color:var(--label-gray);">Tip: you can also drag this card onto any column on the board to move it there directly.</div>
+              ` : ''}
+            </div>
+          </div>
+        </div>
+      `;
+      document.body.insertAdjacentHTML('beforeend', html);
+    }
+
+    function closeAchievementDetail() {
+      const overlay = document.getElementById('achievementDetailOverlay');
+      if (overlay) overlay.remove();
     }
 
     function openAddModal() {
