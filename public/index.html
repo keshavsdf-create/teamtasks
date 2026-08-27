@@ -554,6 +554,17 @@
     .btn-small { padding: 7px 14px; font-size: 12px; }
     .btn-outline { background: #F1F5F9; color: var(--slate); padding: 7px 14px; }
 
+    .chat-trigger { position: relative; }
+
+    .chat-unread-dot {
+      position: absolute;
+      top: -3px; right: -3px;
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      background: var(--red);
+      border: 2px solid var(--card-bg);
+    }
+
     /* ===== STATS BAR ===== */
     .stats-bar {
       display: grid;
@@ -935,6 +946,58 @@
 
     .modal h2 { font-size: 22px; font-weight: 800; margin-bottom: 20px; color: var(--navy); }
 
+    .chat-modal { max-width: 480px; display: flex; flex-direction: column; height: 640px; max-height: 80vh; }
+    .chat-modal h2 { margin-bottom: 4px; }
+
+    .chat-subtitle { font-size: 12px; color: var(--label-gray); margin-bottom: 16px; }
+
+    .chat-messages {
+      flex: 1;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      padding: 4px 4px 8px;
+      border-top: 1px solid var(--border-soft);
+      border-bottom: 1px solid var(--border-soft);
+    }
+
+    .chat-msg { max-width: 78%; }
+    .chat-msg.mine { align-self: flex-end; }
+
+    .chat-msg-meta { font-size: 11px; color: var(--label-gray); margin-bottom: 3px; padding: 0 4px; }
+    .chat-msg.mine .chat-msg-meta { text-align: right; }
+
+    .chat-msg-bubble {
+      background: #F1F5F9;
+      color: var(--navy);
+      border-radius: 14px 14px 14px 4px;
+      padding: 8px 12px;
+      font-size: 13px;
+      line-height: 1.4;
+      word-break: break-word;
+      white-space: pre-wrap;
+    }
+
+    .chat-msg.mine .chat-msg-bubble {
+      background: var(--teal);
+      color: white;
+      border-radius: 14px 14px 4px 14px;
+    }
+
+    .chat-empty-hint { margin: auto; font-size: 13px; color: var(--label-gray); text-align: center; }
+
+    .chat-input-row { display: flex; gap: 8px; margin-top: 14px; }
+    .chat-input {
+      flex: 1;
+      padding: 10px 14px;
+      border-radius: 10px;
+      border: 1px solid var(--border-soft);
+      font-size: 13px;
+      font-family: inherit;
+    }
+    .chat-input:focus { outline: none; border-color: var(--teal); }
+
     .form-group { margin-bottom: 16px; }
 
     .form-group label {
@@ -1113,7 +1176,7 @@
     <div class="login-right">
     <div class="login-card">
       <h1 class="login-title">Welcome Back</h1>
-      <input type="text" id="loginUsername" class="login-field" placeholder="Email" autocomplete="username">
+      <input type="text" id="loginUsername" class="login-field" placeholder="User ID" autocomplete="username">
       <input type="password" id="loginPassword" class="login-field" placeholder="Password" autocomplete="current-password">
       <div class="login-row">
         <label class="login-remember">
@@ -1137,6 +1200,10 @@
         <h1>TeamTasks</h1>
       </div>
       <div class="header-right">
+        <button class="btn btn-outline chat-trigger" id="chatTriggerBtn" onclick="openChatModal()">
+          💬 Team Chat
+          <span class="chat-unread-dot" id="chatUnreadDot" style="display:none;"></span>
+        </button>
         <button class="btn btn-primary" id="newTaskBtn" onclick="openAddModal()">+ New Task</button>
         <div class="team-trigger-wrap">
           <button class="team-trigger" onclick="toggleTeamDropdown(event)">
@@ -1172,6 +1239,21 @@
 
     <div class="board" id="board"></div>
 
+  </div>
+
+  <div class="modal-overlay" id="chatModal">
+    <div class="modal chat-modal">
+      <h2>💬 Team Chat</h2>
+      <div class="chat-subtitle">Everyone on the team sees this — there's no private messaging.</div>
+      <div class="chat-messages" id="chatMessages"></div>
+      <div class="chat-input-row">
+        <input type="text" id="chatInput" class="chat-input" placeholder="Message the team..." maxlength="1000">
+        <button class="btn btn-primary" id="chatSendBtn" onclick="sendChatMessage()">Send</button>
+      </div>
+      <div class="modal-actions" style="margin-top:14px;">
+        <button class="btn btn-cancel" onclick="closeChatModal()">Close</button>
+      </div>
+    </div>
   </div>
 
   <div class="modal-overlay" id="employeeModal">
@@ -1588,7 +1670,8 @@
       document.getElementById('loginScreen').style.display = 'none';
       document.getElementById('appRoot').style.display = 'block';
       applyRoleUI();
-      
+      startChatUnreadPolling();
+
       // Load data from Supabase before rendering
       init().then(() => {
         renderAssignOptions();
@@ -1600,6 +1683,128 @@
         renderEmployeeList();
         render(); // Still render with what we have
       });
+    }
+
+    // ===== TEAM CHAT (single shared room, no DMs) =====
+    let chatPollInterval = null;
+    let chatUnreadPollInterval = null;
+
+    function chatLastReadKey() {
+      return 'teamtasks_chat_last_read_' + (currentUser ? currentUser.username : '');
+    }
+
+    function markChatRead(latestTimestamp) {
+      if (!currentUser || !latestTimestamp) return;
+      localStorage.setItem(chatLastReadKey(), latestTimestamp);
+      const dot = document.getElementById('chatUnreadDot');
+      if (dot) dot.style.display = 'none';
+    }
+
+    async function checkUnreadChat() {
+      if (!currentUser) return;
+      try {
+        const { data, error } = await supabase
+          .from('messages')
+          .select('created_at')
+          .order('created_at', { ascending: false })
+          .limit(1);
+        if (error || !data || !data.length) return;
+
+        const latest = data[0].created_at;
+        const lastRead = localStorage.getItem(chatLastReadKey());
+        const dot = document.getElementById('chatUnreadDot');
+        const chatOpen = document.getElementById('chatModal').classList.contains('show');
+        if (dot) dot.style.display = (!chatOpen && (!lastRead || new Date(latest) > new Date(lastRead))) ? 'block' : 'none';
+      } catch (err) {
+        console.error('❌ Error checking for new chat messages:', err);
+      }
+    }
+
+    function startChatUnreadPolling() {
+      checkUnreadChat();
+      stopChatUnreadPolling();
+      chatUnreadPollInterval = setInterval(checkUnreadChat, 15000);
+    }
+
+    function stopChatUnreadPolling() {
+      if (chatUnreadPollInterval) clearInterval(chatUnreadPollInterval);
+      chatUnreadPollInterval = null;
+    }
+
+    async function loadChatMessages() {
+      const box = document.getElementById('chatMessages');
+      try {
+        const { data, error } = await supabase
+          .from('messages')
+          .select('*')
+          .order('created_at', { ascending: true })
+          .limit(200);
+
+        if (error) {
+          console.error('❌ Supabase messages select failed:', error.message);
+          box.innerHTML = '<div class="chat-empty-hint">Couldn\'t load messages.</div>';
+          return;
+        }
+        if (!data || data.length === 0) {
+          box.innerHTML = '<div class="chat-empty-hint">No messages yet — say hi 👋</div>';
+          return;
+        }
+
+        box.innerHTML = data.map(m => {
+          const mine = currentUser && m.sender_name === currentUser.name;
+          const time = new Date(m.created_at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+          return `
+            <div class="chat-msg ${mine ? 'mine' : ''}">
+              <div class="chat-msg-meta">${mine ? '' : esc(m.sender_name) + ' · '}${time}</div>
+              <div class="chat-msg-bubble">${esc(m.text)}</div>
+            </div>
+          `;
+        }).join('');
+        box.scrollTop = box.scrollHeight;
+
+        markChatRead(data[data.length - 1].created_at);
+      } catch (err) {
+        console.error('❌ Error loading chat messages:', err);
+        box.innerHTML = '<div class="chat-empty-hint">Couldn\'t load messages.</div>';
+      }
+    }
+
+    function openChatModal() {
+      document.getElementById('chatModal').classList.add('show');
+      loadChatMessages();
+      if (chatPollInterval) clearInterval(chatPollInterval);
+      chatPollInterval = setInterval(loadChatMessages, 4000);
+      document.getElementById('chatInput').focus();
+    }
+
+    function closeChatModal() {
+      document.getElementById('chatModal').classList.remove('show');
+      if (chatPollInterval) clearInterval(chatPollInterval);
+      chatPollInterval = null;
+    }
+
+    async function sendChatMessage() {
+      const input = document.getElementById('chatInput');
+      const text = input.value.trim();
+      if (!text || !currentUser) return;
+
+      input.value = '';
+      input.disabled = true;
+      const { error } = await supabase.from('messages').insert({
+        sender_name: currentUser.name,
+        sender_role: currentUser.role,
+        text
+      });
+      input.disabled = false;
+      input.focus();
+
+      if (error) {
+        console.error('❌ Supabase message insert failed:', error.message);
+        alert('Message failed to send. Please try again.');
+        input.value = text;
+        return;
+      }
+      await loadChatMessages();
     }
 
     function handleLoginSubmit() {
@@ -1642,6 +1847,8 @@
     function handleLogout() {
       document.getElementById('teamDropdown').classList.remove('show');
       localStorage.removeItem('teamtasks_session');
+      closeChatModal();
+      stopChatUnreadPolling();
       showLogin();
     }
 
@@ -2856,8 +3063,12 @@
       if (e.target.id === 'dashboardModal') closeDashboardModal();
     });
 
+    document.getElementById('chatModal').addEventListener('click', e => {
+      if (e.target.id === 'chatModal') closeChatModal();
+    });
+
     document.addEventListener('keydown', e => {
-      if (e.key === 'Escape') { closeModal(); closeDashboardModal(); closeEmployeeModal(); }
+      if (e.key === 'Escape') { closeModal(); closeDashboardModal(); closeEmployeeModal(); closeChatModal(); }
     });
 
     document.getElementById('loginUsername').addEventListener('keydown', e => {
@@ -2865,6 +3076,9 @@
     });
     document.getElementById('loginPassword').addEventListener('keydown', e => {
       if (e.key === 'Enter') handleLoginSubmit();
+    });
+    document.getElementById('chatInput').addEventListener('keydown', e => {
+      if (e.key === 'Enter') sendChatMessage();
     });
 
     // Entry point: check for a remembered/active session (using the instantly-available
