@@ -1865,6 +1865,16 @@
       return tasks.filter(t => t.assigned === currentUser.name || (t.tagged || []).includes(currentUser.name));
     }
 
+    // Approval is manager-only oversight of everyone's requests; an employee should
+    // only see the ones they personally sent, not ones they're merely tagged on
+    // (visibleTasks()'s normal assigned-or-tagged rule would leak other people's
+    // approval requests to a helper tagged on the task).
+    function visibleApprovalTasks() {
+      const approvalTasks = tasks.filter(t => t.status === 'approval');
+      if (!currentUser || currentUser.role === 'Manager') return approvalTasks;
+      return approvalTasks.filter(t => t.createdBy === currentUser.name);
+    }
+
     async function persist() {
       localStorage.setItem('teamtasks_data', JSON.stringify(tasks));
       
@@ -2482,7 +2492,7 @@
       const total = vTasks.length;
       const done = vTasks.filter(t => t.status === 'done').length;
       const inProgress = vTasks.filter(t => t.status === 'in-progress').length;
-      const pendingApproval = vTasks.filter(t => t.status === 'approval' && (t.approvalStatus || 'pending') === 'pending').length;
+      const pendingApproval = visibleApprovalTasks().filter(t => (t.approvalStatus || 'pending') === 'pending').length;
       const overdue = vTasks.filter(t => t.deadline && t.deadline < today() && t.status !== 'done').length;
 
       const cards = [
@@ -2535,7 +2545,7 @@
           return;
         }
 
-        const colTasks = vTasks.filter(t => t.status === s.key);
+        const colTasks = s.key === 'approval' ? visibleApprovalTasks() : vTasks.filter(t => t.status === s.key);
         const isEmpty = colTasks.length === 0;
         col.className = 'column' + (isEmpty ? ' column-collapsed' : '');
         col.dataset.status = s.key;
