@@ -640,6 +640,48 @@
       padding: 14px 10px;
     }
 
+    .col-hide-btn {
+      flex-shrink: 0;
+      border: none;
+      background: transparent;
+      cursor: pointer;
+      font-size: 12px;
+      opacity: 0.55;
+      padding: 2px;
+      border-radius: 6px;
+    }
+    .col-hide-btn:hover { opacity: 1; background: #F1F5F9; }
+
+    .column.column-hidden-placeholder {
+      flex: 0 0 190px;
+      min-width: 190px;
+      width: 190px;
+      padding: 14px;
+      background: #F1F5F9;
+      border: 1.5px dashed var(--border-soft);
+      box-shadow: none;
+    }
+    .column-hidden-placeholder .column-header {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 8px;
+      margin-bottom: 0;
+    }
+    .column-hidden-placeholder .column-header span { font-size: 13px; color: var(--label-gray); }
+    .column-hidden-placeholder .column-header em { font-style: normal; }
+
+    .col-show-btn {
+      border: 1.5px solid var(--border-soft);
+      background: white;
+      color: var(--navy);
+      border-radius: 8px;
+      padding: 6px 10px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .col-show-btn:hover { border-color: var(--teal); color: var(--teal); }
+
     .column-header {
       display: flex;
       justify-content: space-between;
@@ -1117,6 +1159,22 @@
     .voice-empty { font-size: 12px; color: var(--label-gray); }
     .voice-remove { background: none; border: none; color: var(--red); cursor: pointer; font-size: 15px; }
 
+    .link-input-row { display: flex; gap: 6px; align-items: center; margin-bottom: 8px; }
+    .link-input-row:last-child { margin-bottom: 0; }
+    .link-input-row input { flex: 1; width: auto; margin-bottom: 0; }
+
+    .link-remove-btn {
+      flex-shrink: 0;
+      width: 32px; height: 32px;
+      border: 1.5px solid var(--border-soft);
+      border-radius: 10px;
+      background: #F8FBFE;
+      color: var(--label-gray);
+      cursor: pointer;
+      font-size: 14px;
+    }
+    .link-remove-btn:hover { background: var(--red); border-color: var(--red); color: white; }
+
     .attach-dropzone {
       border: 1.5px dashed var(--border-soft);
       border-radius: 10px;
@@ -1329,6 +1387,11 @@
       </div>
 
       <div class="form-group">
+        <label>Links (optional, up to 4)</label>
+        <div id="linksContainer"></div>
+      </div>
+
+      <div class="form-group">
         <label>Assigned To</label>
         <select id="fAssigned"></select>
         <div id="assignedHint" style="display:none;font-size:11px;color:var(--label-gray);margin-top:6px;">Only a manager can assign tasks to someone else.</div>
@@ -1359,6 +1422,7 @@
           <option value="todo">To Do</option>
           <option value="in-progress">In Progress</option>
           <option value="approval">Approval</option>
+          <option value="skill">Skills</option>
           <option value="done">Done</option>
           <option value="need-help">Need Help</option>
           <option value="hold">Hold</option>
@@ -1421,6 +1485,7 @@
       { key: 'hold', label: 'Hold', color: '#64748B' },
       { key: 'future', label: 'Future', color: '#6366F1' },
       { key: 'approval', label: 'Approval', color: '#14B8C6' },
+      { key: 'skill', label: 'Skills', color: '#8B5CF6' },
       { key: 'achievement', label: '✨ Achievements', color: '#FBBF24' }
     ];
     const STATUS_COLOR = Object.fromEntries(STATUSES.map(s => [s.key, s.color]));
@@ -1446,9 +1511,11 @@
       { id: '4', name: 'Alex', role: 'Employee', username: 'alex', password: '1234', email: 'alex@teamtasks.com' }
     ];
     let currentUser = null;
+    let hiddenColumns = [];
 
     let tempVoiceNotes = [null, null];
     let tempAttachments = [];
+    let tempLinks = [''];
     let tempApproval = 'pending';
     let mediaRecorder = null;
     let recordingSlot = null;
@@ -1477,7 +1544,8 @@
           approvalStatus: t.approval_status || 'pending',
           createdBy: t.created_by || 'System',
           voiceNotes: [null, null],
-          attachments: []
+          attachments: [],
+          links: t.links || []
         }));
       } else {
         // Seed with sample data if database is empty
@@ -1578,6 +1646,51 @@
       renderAssignOptions();
 
       await loadAchievements();
+      await loadHiddenColumns();
+    }
+
+    async function loadHiddenColumns() {
+      try {
+        const { data, error } = await supabase
+          .from('app_settings')
+          .select('hidden_columns')
+          .eq('id', 1);
+
+        if (!error && data && data.length > 0) {
+          hiddenColumns = data[0].hidden_columns || [];
+          localStorage.setItem('teamtasks_hidden_columns', JSON.stringify(hiddenColumns));
+        } else {
+          hiddenColumns = JSON.parse(localStorage.getItem('teamtasks_hidden_columns') || '[]');
+        }
+      } catch (err) {
+        console.error('❌ Error loading hidden columns:', err);
+        hiddenColumns = JSON.parse(localStorage.getItem('teamtasks_hidden_columns') || '[]');
+      }
+    }
+
+    async function toggleColumnHidden(key, hide) {
+      if (!currentUser || currentUser.role !== 'Manager') return;
+      const label = (STATUSES.find(s => s.key === key) || {}).label || key;
+
+      if (hide) {
+        if (!confirm(`Hide the "${label}" column for everyone on the team?`)) return;
+        if (!hiddenColumns.includes(key)) hiddenColumns.push(key);
+      } else {
+        hiddenColumns = hiddenColumns.filter(k => k !== key);
+      }
+
+      localStorage.setItem('teamtasks_hidden_columns', JSON.stringify(hiddenColumns));
+      try {
+        const { error } = await supabase
+          .from('app_settings')
+          .update({ hidden_columns: hiddenColumns, updated_at: new Date().toISOString() })
+          .eq('id', 1);
+        if (error) console.error('❌ Supabase hidden_columns update failed:', error.message);
+      } catch (err) {
+        console.error('❌ Error saving hidden columns:', err);
+      }
+
+      render();
     }
 
     async function loadAchievements() {
@@ -1900,6 +2013,7 @@
                 urgency: task.urgency,
                 tags: task.tagged,
                 approval_status: task.approvalStatus || 'pending',
+                links: task.links || [],
                 updated_at: new Date().toISOString()
               })
               .eq('id', task.id);
@@ -1919,6 +2033,7 @@
                 urgency: task.urgency,
                 tags: task.tagged,
                 approval_status: task.approvalStatus || 'pending',
+                links: task.links || [],
                 code: task.code
               });
             if (insertError) console.error('❌ Supabase task insert failed for', task.name, ':', insertError.message);
@@ -2530,9 +2645,30 @@
       const vTasks = visibleTasks();
 
       const isManager = currentUser && currentUser.role === 'Manager';
+      // A column hidden "for everyone" really means everyone - employees never see
+      // it at all; the manager who hid it still sees a collapsed placeholder (below)
+      // so there's somewhere to turn it back on.
+      const visibleStatuses = isManager ? STATUSES : STATUSES.filter(s => !hiddenColumns.includes(s.key));
 
-      STATUSES.forEach(s => {
+      const hideBtnHtml = key => isManager
+        ? `<button type="button" class="col-hide-btn" title="Hide this column for everyone" onclick="event.stopPropagation(); toggleColumnHidden('${key}', true)">🙈</button>`
+        : '';
+
+      visibleStatuses.forEach(s => {
         const col = document.createElement('div');
+
+        if (isManager && hiddenColumns.includes(s.key)) {
+          col.className = 'column column-hidden-placeholder';
+          col.dataset.status = s.key;
+          col.innerHTML = `
+            <div class="column-header">
+              <span>${s.label} <em>(hidden)</em></span>
+              <button type="button" class="col-show-btn" title="Show this column for everyone" onclick="toggleColumnHidden('${s.key}', false)">👁 Show</button>
+            </div>
+          `;
+          board.appendChild(col);
+          return;
+        }
 
         if (s.key === 'achievement') {
           // Manager sees everyone's achievements; employees see only their own
@@ -2543,7 +2679,10 @@
           col.innerHTML = `
             <div class="column-header">
               <span>${s.label}</span>
-              <span class="column-count achievement-count">${visibleAchievements.length}</span>
+              <div style="display:flex;align-items:center;gap:6px;">
+                <span class="column-count achievement-count">${visibleAchievements.length}</span>
+                ${hideBtnHtml(s.key)}
+              </div>
             </div>
             <div class="column-body" data-status="${s.key}">
               ${isEmptyAch ? '<div class="empty-hint">Nothing archived yet</div>' : ''}
@@ -2563,7 +2702,10 @@
         col.innerHTML = `
           <div class="column-header">
             <span>${s.label}</span>
-            <span class="column-count">${colTasks.length}</span>
+            <div style="display:flex;align-items:center;gap:6px;">
+              <span class="column-count">${colTasks.length}</span>
+              ${hideBtnHtml(s.key)}
+            </div>
           </div>
           <div class="column-body" data-status="${s.key}">
             ${isEmpty ? '<div class="empty-hint">Drop tasks here</div>' : ''}
@@ -2579,11 +2721,22 @@
     }
 
     function attachColumnDropHandlers(col, s) {
-      col.addEventListener('dragover', e => { e.preventDefault(); col.classList.add('drag-over'); });
+      col.addEventListener('dragover', e => {
+        // Approval can only be entered by creating/editing a task with that status
+        // directly - not by dragging an existing card in. Not calling
+        // preventDefault() here tells the browser this isn't a valid drop target,
+        // so 'drop' below never fires for this column.
+        if (s.key === 'approval') return;
+        e.preventDefault();
+        col.classList.add('drag-over');
+      });
       col.addEventListener('dragleave', () => col.classList.remove('drag-over'));
       col.addEventListener('drop', e => {
         e.preventDefault();
         col.classList.remove('drag-over');
+        // Belt and suspenders: the dragover handler above already stops a real
+        // browser drag from ever reaching here, but guard it directly too.
+        if (s.key === 'approval') return;
         const id = e.dataTransfer.getData('text/plain');
 
         if (id.startsWith('ach:')) {
@@ -2600,10 +2753,10 @@
               moveToAchievement(task);
             }
           } else {
+            // Approval is excluded here too: dragover never allows a drop on
+            // that column (see attachColumnDropHandlers above), so s.key can
+            // never actually be 'approval' at this point.
             task.status = s.key;
-            if (s.key === 'approval' && !task.approvalStatus) {
-              task.approvalStatus = 'pending';
-            }
             persist();
             render();
           }
@@ -2634,8 +2787,9 @@
 
       const voiceCount = (task.voiceNotes || []).filter(Boolean).length;
       const fileCount = (task.attachments || []).length;
-      const iconsHtml = (voiceCount || fileCount)
-        ? `<div class="card-icons">${voiceCount ? `🎙️ ${voiceCount}` : ''} ${fileCount ? `📎 ${fileCount}` : ''}</div>` : '';
+      const linkCount = (task.links || []).length;
+      const iconsHtml = (voiceCount || fileCount || linkCount)
+        ? `<div class="card-icons">${voiceCount ? `🎙️ ${voiceCount}` : ''} ${fileCount ? `📎 ${fileCount}` : ''} ${linkCount ? `🔗 ${linkCount}` : ''}</div>` : '';
 
       const approvalBadge = task.status === 'approval'
         ? `<span class="approval-badge ${task.approvalStatus || 'pending'}">${task.approvalStatus || 'pending'}</span>` : '';
@@ -2747,6 +2901,7 @@
       editingId = null;
       tempVoiceNotes = [null, null];
       tempAttachments = [];
+      tempLinks = [''];
       tempApproval = 'pending';
 
       document.getElementById('modalTitle').textContent = 'New Task';
@@ -2765,6 +2920,7 @@
 
       renderVoiceSlots();
       renderAttachments();
+      renderLinksInputs();
       onStatusChange();
       document.getElementById('taskModal').classList.add('show');
     }
@@ -2775,6 +2931,7 @@
       editingId = id;
       tempVoiceNotes = (task.voiceNotes && task.voiceNotes.length === 2) ? [...task.voiceNotes] : [null, null];
       tempAttachments = task.attachments ? [...task.attachments] : [];
+      tempLinks = (task.links && task.links.length) ? [...task.links] : [''];
       tempApproval = task.approvalStatus || 'pending';
 
       document.getElementById('modalTitle').textContent = 'Edit Task';
@@ -2806,6 +2963,7 @@
 
       renderVoiceSlots();
       renderAttachments();
+      renderLinksInputs();
       onStatusChange();
       document.getElementById('taskModal').classList.add('show');
     }
@@ -2827,11 +2985,15 @@
         desc: document.getElementById('fDesc').value.trim(),
         assigned: document.getElementById('fAssigned').value,
         tagged: getMultiSelect('fTagged'),
-        deadline: document.getElementById('fDeadline').value,
+        // Empty string, not null, when the date picker is left blank - Postgres's
+        // `date` column rejects "" outright ("invalid input syntax for type date"),
+        // which was silently failing the entire Supabase insert for any deadline-less task.
+        deadline: document.getElementById('fDeadline').value || null,
         urgency: document.getElementById('fUrgency').value,
         status,
         voiceNotes: tempVoiceNotes,
-        attachments: tempAttachments
+        attachments: tempAttachments,
+        links: tempLinks.map(l => l.trim()).filter(Boolean).slice(0, 4)
       };
 
       if (status === 'approval') {
@@ -3012,6 +3174,34 @@
     function removeAttachment(index) {
       tempAttachments.splice(index, 1);
       renderAttachments();
+    }
+
+    function renderLinksInputs() {
+      const box = document.getElementById('linksContainer');
+      box.innerHTML = tempLinks.map((val, i) => `
+        <div class="link-input-row">
+          <input type="url" class="link-input" placeholder="https://..." value="${esc(val)}" oninput="onLinkInput(${i}, this.value)">
+          ${tempLinks.length > 1 ? `<button type="button" class="link-remove-btn" onclick="removeLinkSlot(${i})" title="Remove">✕</button>` : ''}
+        </div>
+      `).join('');
+    }
+
+    function onLinkInput(idx, value) {
+      tempLinks[idx] = value;
+      // Once the last visible field gets content, reveal the next empty one - up to 4 total.
+      if (idx === tempLinks.length - 1 && value.trim() && tempLinks.length < 4) {
+        tempLinks.push('');
+        renderLinksInputs();
+        const inputs = document.querySelectorAll('#linksContainer .link-input');
+        const last = inputs[inputs.length - 1];
+        if (last) last.focus();
+      }
+    }
+
+    function removeLinkSlot(idx) {
+      tempLinks.splice(idx, 1);
+      if (tempLinks.length === 0) tempLinks = [''];
+      renderLinksInputs();
     }
 
     function renderAttachments() {
