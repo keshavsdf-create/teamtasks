@@ -617,23 +617,72 @@
     .board {
       display: flex;
       flex-direction: column;
-      gap: 14px;
+      gap: 28px;
     }
+
+    .board-section-title {
+      font-size: 14px;
+      font-weight: 800;
+      color: var(--navy);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      margin-bottom: 10px;
+      padding-left: 2px;
+    }
+
+    .board-section-row {
+      display: flex;
+      gap: 18px;
+      overflow-x: auto;
+      align-items: flex-start;
+      padding-bottom: 12px;
+    }
+
+    .column-with-add-bar {
+      display: flex;
+      flex-direction: column;
+      flex: 1 1 270px;
+      min-width: 270px;
+      transition: flex-basis 0.2s ease, min-width 0.2s ease;
+    }
+    .column-with-add-bar.wrap-collapsed { flex: 0 0 120px; min-width: 120px; }
+    .column-with-add-bar .column { width: 100%; min-width: 0; flex: none; }
+
+    .add-task-bar {
+      display: flex;
+      margin-bottom: 10px;
+    }
+
+    .btn-add-task-inline {
+      background: var(--teal);
+      color: white;
+      border: none;
+      border-radius: 10px;
+      padding: 8px 14px;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 3px 10px rgba(20, 184, 198, 0.3);
+    }
+    .btn-add-task-inline:hover { filter: brightness(1.05); }
 
     .column {
       background: var(--card-bg);
       border-radius: 18px;
       box-shadow: var(--shadow-sm);
-      width: 100%;
-      min-width: 0;
+      min-width: 270px;
+      width: 270px;
+      flex: 1 1 270px;
       padding: 18px;
-      transition: padding 0.2s ease;
+      transition: flex-basis 0.2s ease, min-width 0.2s ease, width 0.2s ease;
     }
 
     .column.column-collapsed {
-      padding: 12px 18px;
+      flex: 0 0 120px;
+      min-width: 120px;
+      width: 120px;
+      padding: 14px 10px;
     }
-    .column.column-collapsed .column-header { margin-bottom: 0; }
 
     .col-hide-btn {
       flex-shrink: 0;
@@ -648,14 +697,18 @@
     .col-hide-btn:hover { opacity: 1; background: #F1F5F9; }
 
     .column.column-hidden-placeholder {
-      width: 100%;
-      min-width: 0;
-      padding: 14px 18px;
+      flex: 0 0 190px;
+      min-width: 190px;
+      width: 190px;
+      padding: 14px;
       background: #F1F5F9;
       border: 1.5px dashed var(--border-soft);
       box-shadow: none;
     }
     .column-hidden-placeholder .column-header {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 8px;
       margin-bottom: 0;
     }
     .column-hidden-placeholder .column-header span { font-size: 13px; color: var(--label-gray); }
@@ -684,6 +737,18 @@
       font-size: 16px;
       font-weight: 700;
       color: var(--navy);
+    }
+
+    .column.column-collapsed .column-header {
+      flex-direction: row;
+      white-space: nowrap;
+      overflow: hidden;
+    }
+
+    .column.column-collapsed .column-header span:first-child {
+      font-size: 12px;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
 
     .column-count {
@@ -1468,6 +1533,13 @@
       { key: 'achievement', label: '✨ Achievements', color: '#FBBF24' }
     ];
     const STATUS_COLOR = Object.fromEntries(STATUSES.map(s => [s.key, s.color]));
+
+    // Groups the board into labeled rows instead of one long strip of columns.
+    const BOARD_SECTIONS = [
+      { title: 'Active Work', keys: ['todo', 'in-progress', 'done'] },
+      { title: 'Blocked & Upcoming', keys: ['need-help', 'hold', 'future'] },
+      { title: 'Approvals & Recognition', keys: ['approval', 'skill', 'achievement'] }
+    ];
 
     const AVATAR_COLORS = ['#6366F1', '#F59E0B', '#14B8C6', '#EF4444', '#22C55E', '#7C5CFC'];
 
@@ -2628,6 +2700,7 @@
       // it at all; the manager who hid it still sees a collapsed placeholder (below)
       // so there's somewhere to turn it back on.
       const visibleStatuses = isManager ? STATUSES : STATUSES.filter(s => !hiddenColumns.includes(s.key));
+      const visibleByKey = Object.fromEntries(visibleStatuses.map(s => [s.key, s]));
 
       const hideBtnHtml = key => isManager
         ? `<button type="button" class="col-hide-btn" title="Hide this column for everyone" onclick="event.stopPropagation(); toggleColumnHidden('${key}', true)">🙈</button>`
@@ -2695,8 +2768,38 @@
         return col;
       }
 
-      visibleStatuses.forEach(s => {
-        board.appendChild(buildColumn(s));
+      BOARD_SECTIONS.forEach(section => {
+        const keysToRender = section.keys.filter(k => visibleByKey[k]);
+        if (keysToRender.length === 0) return;
+
+        const sectionEl = document.createElement('div');
+        sectionEl.className = 'board-section';
+
+        const title = document.createElement('div');
+        title.className = 'board-section-title';
+        title.textContent = section.title;
+        sectionEl.appendChild(title);
+
+        const row = document.createElement('div');
+        row.className = 'board-section-row';
+
+        keysToRender.forEach(key => {
+          const s = visibleByKey[key];
+          const col = buildColumn(s);
+
+          if (key === 'todo' && !(isManager && hiddenColumns.includes('todo'))) {
+            const wrap = document.createElement('div');
+            wrap.className = 'column-with-add-bar' + (col.classList.contains('column-collapsed') ? ' wrap-collapsed' : '');
+            wrap.innerHTML = `<div class="add-task-bar"><button type="button" class="btn-add-task-inline" onclick="openAddModalForStatus('todo')">+ Add Task</button></div>`;
+            wrap.appendChild(col);
+            row.appendChild(wrap);
+          } else {
+            row.appendChild(col);
+          }
+        });
+
+        sectionEl.appendChild(row);
+        board.appendChild(sectionEl);
       });
     }
 
@@ -2903,6 +3006,14 @@
       renderLinksInputs();
       onStatusChange();
       document.getElementById('taskModal').classList.add('show');
+    }
+
+    // Same as openAddModal(), but pre-sets the status - used by the "+ Add Task"
+    // bar that sits above a specific column instead of the generic header button.
+    function openAddModalForStatus(status) {
+      openAddModal();
+      document.getElementById('fStatus').value = status;
+      onStatusChange();
     }
 
     function openEditModal(id) {
