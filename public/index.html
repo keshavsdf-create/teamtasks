@@ -1303,8 +1303,8 @@
           <input type="text" id="profileUsernameInput" class="profile-edit-input" placeholder="Login ID">
         </div>
         <div style="flex:1;">
-          <label style="font-size:10px;color:var(--label-gray);font-weight:700;display:block;margin-bottom:4px;">PASSWORD</label>
-          <input type="text" id="profilePasswordInput" class="profile-edit-input" placeholder="Password">
+          <label style="font-size:10px;color:var(--label-gray);font-weight:700;display:block;margin-bottom:4px;">NEW PASSWORD</label>
+          <input type="text" id="profilePasswordInput" class="profile-edit-input" placeholder="Leave blank to keep current">
         </div>
       </div>
       <div id="profileEditNote" style="display:none;font-size:11px;color:var(--label-gray);background:#F8FBFE;border:1px solid var(--border-soft);border-radius:8px;padding:8px 12px;margin-bottom:14px;">Only a manager can edit profile details.</div>
@@ -1469,12 +1469,7 @@
     let tasks = [];
     let achievements = [];
     let editingId = null;
-    let employees = [
-      { id: '1', name: 'Manager Admin', role: 'Manager', username: 'manager', password: '1234', email: 'manager@teamtasks.com' },
-      { id: '2', name: 'John', role: 'Employee', username: 'john', password: '1234', email: 'john@teamtasks.com' },
-      { id: '3', name: 'Sarah', role: 'Employee', username: 'sarah', password: '1234', email: 'sarah@teamtasks.com' },
-      { id: '4', name: 'Alex', role: 'Employee', username: 'alex', password: '1234', email: 'alex@teamtasks.com' }
-    ];
+    let employees = [];
     let currentUser = null;
     let hiddenColumns = [];
 
@@ -1487,41 +1482,27 @@
     let recordedChunks = [];
     let taskCounter = 100;
 
-    // Loads real employees from Supabase and merges them into the in-memory
-    // `employees` list, on top of whatever is already there (starts as just
-    // the 4 hardcoded fallback accounts). Called both before the very first
-    // login attempt (so anyone added via "Add Employee" can actually sign in
-    // on a fresh browser, not just after someone else has already logged in
-    // once) and again inside init() after a successful login, to pick up
-    // anything added since.
+    // Loads the team roster from Supabase. RLS requires a real authenticated
+    // session to read the `users` table, so this only succeeds after sign-in -
+    // there's no more hardcoded fallback list to fall back to (every account
+    // is now a real Supabase Auth user, see loadEmployees()'s old fallback-merge
+    // logic, removed once that stopped being necessary).
     async function loadEmployees() {
       try {
-        const { data: supabaseEmployees, error: empError } = await supabase
-          .from('users')
-          .select('*');
-
-        if (!empError && supabaseEmployees && supabaseEmployees.length > 0) {
-          const fromSupabase = supabaseEmployees.map(e => ({
-            id: e.id,
-            name: e.name,
-            role: e.role || 'Employee',
-            username: e.email?.split('@')[0] || e.name.toLowerCase(),
-            password: e.password || '1234',
-            photo: e.photo || null
-          }));
-          // Merge: Supabase entries win on username collision, but any hardcoded
-          // fallback employee (esp. 'manager') not present in Supabase is kept,
-          // so a partially-seeded Supabase table can never lock everyone out.
-          const supabaseUsernames = new Set(fromSupabase.map(e => e.username));
-          const keptFallback = employees.filter(e => !supabaseUsernames.has(e.username));
-          employees = [...fromSupabase, ...keptFallback];
-          console.log('✅ Loaded', fromSupabase.length, 'employees from Supabase, kept', keptFallback.length, 'fallback-only employees');
-        } else {
-          console.warn('⚠️ Supabase empty or unavailable, keeping hardcoded employees');
+        const { data, error } = await supabase.from('users').select('*');
+        if (error) {
+          console.error('❌ Error loading employees from Supabase:', error.message);
+          return;
         }
+        employees = (data || []).map(e => ({
+          id: e.id,
+          name: e.name,
+          role: e.role || 'Employee',
+          username: e.email?.split('@')[0] || e.name.toLowerCase(),
+          photo: e.photo || null
+        }));
       } catch (err) {
         console.error('❌ Error loading employees from Supabase:', err);
-        console.log('Keeping hardcoded fallback employees');
       }
     }
 
@@ -1579,41 +1560,6 @@
       }
 
       await loadEmployees();
-
-      // Migration: runs ONCE ever (flagged), so it never reverts credentials you change later
-      const alreadyMigrated = localStorage.getItem('teamtasks_creds_migrated');
-      if (!alreadyMigrated) {
-        let needsMigration = false;
-        employees.forEach(e => {
-          if (!e.username) { e.username = slugify(e.name); needsMigration = true; }
-          if (!e.password) { e.password = '1234'; needsMigration = true; }
-        });
-
-        // Give the sole manager the friendly 'manager' login ID — but ONLY if their
-        // current username still looks like the untouched auto-generated slug
-        // (meaning they never deliberately customized it themselves)
-        const mgrs = employees.filter(e => e.role === 'Manager');
-        if (mgrs.length === 1) {
-          const mgr = mgrs[0];
-          const looksAutoGenerated = mgr.username === slugify(mgr.name);
-          const takenByOther = employees.some(e => e.id !== mgr.id && e.username === 'manager');
-          if (looksAutoGenerated && mgr.username !== 'manager' && !takenByOther) {
-            mgr.username = 'manager';
-            needsMigration = true;
-          }
-        }
-
-        if (needsMigration) persistEmployees();
-        localStorage.setItem('teamtasks_creds_migrated', '1');
-      } else {
-        // Still backfill in the rare case an employee somehow has no credentials at all
-        let needsBackfill = false;
-        employees.forEach(e => {
-          if (!e.username) { e.username = slugify(e.name); needsBackfill = true; }
-          if (!e.password) { e.password = '1234'; needsBackfill = true; }
-        });
-        if (needsBackfill) persistEmployees();
-      }
 
       const codes = tasks.map(t => t.code).filter(Boolean).map(c => parseInt(c.replace('T-', ''), 10)).filter(n => !isNaN(n));
       taskCounter = codes.length ? Math.max(...codes) : 100;
@@ -1717,17 +1663,41 @@
       return name.trim().toLowerCase().replace(/[^a-z0-9]+/g, '');
     }
 
-    function checkSession() {
-      const savedUsername = localStorage.getItem('teamtasks_session');
-      if (savedUsername) {
-        const emp = employees.find(e => e.username === savedUsername);
-        if (emp) {
-          currentUser = emp;
-          showApp();
-          return;
+    // Restores a real Supabase Auth session (a signed JWT the browser can't
+    // forge, unlike the old localStorage-username flag this replaced) and
+    // looks up the matching profile row for name/role. Falls through to the
+    // login screen for anything short of a fully valid, still-live session.
+    async function checkSession() {
+      try {
+        const { data } = await supabase.auth.getSession();
+        const session = data && data.session;
+        if (session && session.user) {
+          const profile = await loadCurrentUserProfile(session.user.id);
+          if (profile) {
+            currentUser = profile;
+            showApp();
+            return;
+          }
         }
+      } catch (err) {
+        console.error('❌ Error restoring session:', err);
       }
       showLogin();
+    }
+
+    async function loadCurrentUserProfile(userId) {
+      const { data, error } = await supabase.from('users').select('*').eq('id', userId).single();
+      if (error || !data) {
+        console.error('❌ Error loading profile:', error ? error.message : 'not found');
+        return null;
+      }
+      return {
+        id: data.id,
+        name: data.name,
+        role: data.role || 'Employee',
+        username: data.email?.split('@')[0] || data.name.toLowerCase(),
+        photo: data.photo || null
+      };
     }
 
     function showLogin() {
@@ -1883,39 +1853,60 @@
       await loadChatMessages();
     }
 
-    function handleLoginSubmit() {
-      // Don't block login - use whatever data we have (Supabase or fallback)
+    async function handleLoginSubmit() {
       const username = document.getElementById('loginUsername').value.trim().toLowerCase();
       const password = document.getElementById('loginPassword').value;
       const errEl = document.getElementById('loginError');
+      const submitBtn = document.querySelector('.login-submit');
 
-      const emp = employees.find(e => {
-        const empUsername = (e.username || '').toLowerCase().trim();
-        return empUsername === username && e.password === password;
+      if (!username || !password) {
+        errEl.textContent = 'Enter a User ID and password.';
+        errEl.classList.add('show');
+        return;
+      }
+
+      errEl.classList.remove('show');
+      if (submitBtn) submitBtn.disabled = true;
+
+      // Login ID maps onto the real Supabase Auth email under the hood -
+      // e.g. "manager" logs in as manager@teamtasks.com - so the form never
+      // has to change even though real authentication now backs it.
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: username + '@teamtasks.com',
+        password
       });
 
-      if (!emp) {
+      if (submitBtn) submitBtn.disabled = false;
+
+      if (error || !data.session) {
         errEl.textContent = 'Invalid credentials.';
         errEl.classList.add('show');
         return;
       }
 
+      const profile = await loadCurrentUserProfile(data.user.id);
+      if (!profile) {
+        errEl.textContent = 'Signed in, but your profile could not be loaded. Please try again.';
+        errEl.classList.add('show');
+        await supabase.auth.signOut();
+        return;
+      }
+
       if (document.getElementById('loginRemember').checked) {
-        localStorage.setItem('teamtasks_remembered_id', emp.username);
+        localStorage.setItem('teamtasks_remembered_id', profile.username);
       } else {
         localStorage.removeItem('teamtasks_remembered_id');
       }
 
-      currentUser = emp;
-      localStorage.setItem('teamtasks_session', emp.username);
+      currentUser = profile;
       showApp();
     }
 
-    function handleLogout() {
+    async function handleLogout() {
       document.getElementById('teamDropdown').classList.remove('show');
-      localStorage.removeItem('teamtasks_session');
       closeChatModal();
       stopChatUnreadPolling();
+      await supabase.auth.signOut();
       showLogin();
     }
 
@@ -1972,10 +1963,6 @@
 
       const { error } = await supabase.from('tasks').upsert(rows);
       if (error) console.error('❌ Supabase task upsert failed:', error.message);
-    }
-
-    function persistEmployees() {
-      localStorage.setItem('teamtasks_employees', JSON.stringify(employees));
     }
 
     async function moveToAchievement(task) {
@@ -2224,6 +2211,17 @@
       empIdManuallyEdited = true;
     }
 
+    // supabase-js's FunctionsHttpError only exposes a generic "non-2xx status
+    // code" message on error.message - the actual reason is in the response
+    // body, which has to be read separately from error.context.
+    async function edgeFunctionErrorMessage(error) {
+      try {
+        const body = await error.context.json();
+        if (body && body.error) return body.error;
+      } catch (_) { /* fall through to the generic message below */ }
+      return error.message;
+    }
+
     async function addEmployee() {
       const nameInput = document.getElementById('newEmpName');
       const roleSelect = document.getElementById('newEmpRole');
@@ -2243,32 +2241,21 @@
         return;
       }
       const password = passwordInput.value.trim() || '1234';
-      const email = username + '@teamtasks.com';
 
-      // Save to Supabase
-      const { data: inserted, error } = await supabase.from('users').insert({
-        name: name,
-        email: email,
-        role: roleSelect.value,
-        password: password
-      }).select();
+      // Creating a real login account needs the service-role key, which never
+      // reaches the browser - this goes through the manage-employee edge
+      // function instead of a direct table insert.
+      const { error } = await supabase.functions.invoke('manage-employee', {
+        body: { action: 'create', name, username, password, role: roleSelect.value }
+      });
 
       if (error) {
-        console.error('❌ Supabase insert failed:', error.message);
-        console.warn('This is very likely a Supabase Row-Level Security (RLS) policy problem: RLS is enabled on the users table but no INSERT policy exists, so Supabase silently rejects the write for the anon key.');
-        // Still add locally so the manager isn't blocked, using a local id
-        employees.push({
-          id: 'local-' + Date.now(),
-          name, role: roleSelect.value, username, password
-        });
-        persistEmployees();
-        renderEmployeeList();
-        renderAssignOptions();
-        alert(`⚠️ Employee "${name}" was added locally, but could NOT be saved to Supabase.\n\nReason: ${error.message}\n\nThis usually means Supabase's Row-Level Security policies are blocking writes. See the message from Claude for the SQL fix.`);
+        const message = await edgeFunctionErrorMessage(error);
+        console.error('❌ Failed to create employee:', message);
+        alert(`⚠️ Could not create "${name}": ${message}`);
         return;
       }
 
-      // Reload employees from Supabase, merged with fallback so 'manager' etc. can't be lost
       await loadEmployees();
 
       nameInput.value = '';
@@ -2337,7 +2324,9 @@
       document.getElementById('profileNameInput').value = emp.name;
       document.getElementById('profileRoleInput').value = emp.role;
       document.getElementById('profileUsernameInput').value = emp.username || '';
-      document.getElementById('profilePasswordInput').value = emp.password || '';
+      // Never pre-filled - there's nowhere left to read a current password
+      // from (Supabase Auth owns it now), so blank always means "unchanged".
+      document.getElementById('profilePasswordInput').value = '';
 
       const isManager = currentUser && currentUser.role === 'Manager';
       const editable = ['profileNameInput', 'profileRoleInput', 'profileUsernameInput', 'profilePasswordInput'];
@@ -2401,8 +2390,6 @@
       document.getElementById('photoInput').value = '';
     }
 
-    const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
     async function saveEmployeeProfile() {
       const emp = employees.find(e => e.id === editingEmployeeId);
       if (!emp) return;
@@ -2411,10 +2398,12 @@
       if (!newName) { alert('Name cannot be empty'); return; }
       const newRole = document.getElementById('profileRoleInput').value;
       const newUsername = document.getElementById('profileUsernameInput').value.trim().toLowerCase();
+      // Blank means "leave the password as-is" - the field is never pre-filled
+      // with the current password anymore, since nothing can read it back in
+      // plaintext now that Supabase Auth owns it.
       const newPassword = document.getElementById('profilePasswordInput').value.trim();
 
       if (!newUsername) { alert('Login ID cannot be empty'); return; }
-      if (!newPassword) { alert('Password cannot be empty'); return; }
       if (employees.some(e => e.id !== emp.id && e.username.toLowerCase() === newUsername)) {
         alert('That Login ID is already taken by someone else.');
         return;
@@ -2435,35 +2424,35 @@
 
       const wasCurrentUser = currentUser && currentUser.id === emp.id;
 
+      // Account changes (email/password) need the service-role key, so this
+      // goes through the manage-employee edge function rather than a direct
+      // table write.
+      const { error } = await supabase.functions.invoke('manage-employee', {
+        body: {
+          action: 'updateProfile',
+          id: emp.id,
+          name: newName,
+          username: newUsername,
+          role: newRole,
+          photo: tempProfilePhoto,
+          ...(newPassword ? { password: newPassword } : {})
+        }
+      });
+
+      if (error) {
+        const message = await edgeFunctionErrorMessage(error);
+        console.error('❌ Failed to update employee:', message);
+        alert(`⚠️ Could not save changes: ${message}`);
+        return;
+      }
+
       emp.name = newName;
       emp.role = newRole;
       emp.photo = tempProfilePhoto;
       emp.username = newUsername;
-      emp.password = newPassword;
-
-      // Save to Supabase - hardcoded fallback accounts (ids '1'-'4') have never
-      // had a real row, so the first edit creates one; everyone else updates in place.
-      const email = newUsername + '@teamtasks.com';
-      if (UUID_RE.test(emp.id)) {
-        const { error } = await supabase.from('users').update({
-          name: newName, role: newRole, email, password: newPassword, photo: emp.photo || null
-        }).eq('id', emp.id);
-        if (error) console.error('❌ Supabase employee update failed:', error.message);
-      } else {
-        const { data, error } = await supabase.from('users').insert({
-          name: newName, role: newRole, email, password: newPassword, photo: emp.photo || null
-        }).select();
-        if (error) {
-          console.error('❌ Supabase employee insert failed:', error.message);
-        } else if (data && data[0]) {
-          emp.id = data[0].id;
-          if (wasCurrentUser) editingEmployeeId = emp.id;
-        }
-      }
 
       if (wasCurrentUser) {
         currentUser = emp;
-        localStorage.setItem('teamtasks_session', emp.username);
         applyRoleUI();
       }
 
@@ -2473,7 +2462,7 @@
       closeEmployeeModal();
     }
 
-    function deleteEmployeeProfile() {
+    async function deleteEmployeeProfile() {
       const emp = employees.find(e => e.id === editingEmployeeId);
       if (!emp) return;
 
@@ -2488,15 +2477,20 @@
         : `Delete ${emp.name}'s profile?`;
       if (!confirm(warning)) return;
 
-      employees = employees.filter(e => e.id !== editingEmployeeId);
-      persistEmployees();
-
-      // Also remove it from Supabase so it doesn't get merged back in on next load
-      // (hardcoded fallback accounts like 'manager' have non-UUID ids and were never
-      // in this table, so this is a harmless no-op for them)
-      supabase.from('users').delete().eq('id', emp.id).then(({ error }) => {
-        if (error) console.error('❌ Supabase employee delete failed:', error.message);
+      // Deleting the login account needs the service-role key, so this goes
+      // through the manage-employee edge function rather than a direct delete.
+      const { error } = await supabase.functions.invoke('manage-employee', {
+        body: { action: 'delete', id: emp.id }
       });
+
+      if (error) {
+        const message = await edgeFunctionErrorMessage(error);
+        console.error('❌ Failed to delete employee:', message);
+        alert(`⚠️ Could not delete "${emp.name}": ${message}`);
+        return;
+      }
+
+      employees = employees.filter(e => e.id !== editingEmployeeId);
 
       renderAssignOptions();
       renderEmployeeList();
@@ -3246,19 +3240,10 @@
       if (e.key === 'Enter') sendChatMessage();
     });
 
-    // Entry point: load real employees first (so both a fresh login attempt and a
-    // remembered-session restore can find any account added via "Add Employee",
-    // not just the 4 hardcoded fallbacks), then decide whether to restore a
-    // session or show the login screen. Bounded by a timeout so a slow/unreachable
-    // Supabase still lets the hardcoded fallback accounts log in promptly instead
-    // of hanging the entry point indefinitely.
-    (async () => {
-      await Promise.race([
-        loadEmployees(),
-        new Promise(resolve => setTimeout(resolve, 3000))
-      ]);
-      checkSession();
-    })();
+    // Entry point: real login no longer depends on the employees list being
+    // preloaded (Supabase Auth verifies credentials server-side), so this just
+    // checks for a live session and restores it, or shows the login screen.
+    checkSession();
   </script>
 </body>
 </html>
