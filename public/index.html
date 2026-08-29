@@ -1487,6 +1487,44 @@
     let recordedChunks = [];
     let taskCounter = 100;
 
+    // Loads real employees from Supabase and merges them into the in-memory
+    // `employees` list, on top of whatever is already there (starts as just
+    // the 4 hardcoded fallback accounts). Called both before the very first
+    // login attempt (so anyone added via "Add Employee" can actually sign in
+    // on a fresh browser, not just after someone else has already logged in
+    // once) and again inside init() after a successful login, to pick up
+    // anything added since.
+    async function loadEmployees() {
+      try {
+        const { data: supabaseEmployees, error: empError } = await supabase
+          .from('users')
+          .select('*');
+
+        if (!empError && supabaseEmployees && supabaseEmployees.length > 0) {
+          const fromSupabase = supabaseEmployees.map(e => ({
+            id: e.id,
+            name: e.name,
+            role: e.role || 'Employee',
+            username: e.email?.split('@')[0] || e.name.toLowerCase(),
+            password: e.password || '1234',
+            photo: e.photo || null
+          }));
+          // Merge: Supabase entries win on username collision, but any hardcoded
+          // fallback employee (esp. 'manager') not present in Supabase is kept,
+          // so a partially-seeded Supabase table can never lock everyone out.
+          const supabaseUsernames = new Set(fromSupabase.map(e => e.username));
+          const keptFallback = employees.filter(e => !supabaseUsernames.has(e.username));
+          employees = [...fromSupabase, ...keptFallback];
+          console.log('✅ Loaded', fromSupabase.length, 'employees from Supabase, kept', keptFallback.length, 'fallback-only employees');
+        } else {
+          console.warn('⚠️ Supabase empty or unavailable, keeping hardcoded employees');
+        }
+      } catch (err) {
+        console.error('❌ Error loading employees from Supabase:', err);
+        console.log('Keeping hardcoded fallback employees');
+      }
+    }
+
     async function init() {
       console.log('🔄 init() starting - loading data from Supabase...');
       // Load tasks from Supabase
@@ -1508,8 +1546,8 @@
           status: t.status || 'todo',
           approvalStatus: t.approval_status || 'pending',
           createdBy: t.created_by || 'System',
-          voiceNotes: [null, null],
-          attachments: [],
+          voiceNotes: (t.voice_notes && t.voice_notes.length === 2) ? t.voice_notes : [null, null],
+          attachments: t.attachments || [],
           links: t.links || []
         }));
       } else {
@@ -1540,36 +1578,7 @@
         tasks = sampleTasks;
       }
 
-      // Load employees from Supabase (merged with hardcoded fallback, never fully replaced)
-      try {
-        const { data: supabaseEmployees, error: empError } = await supabase
-          .from('users')
-          .select('*');
-        
-        if (!empError && supabaseEmployees && supabaseEmployees.length > 0) {
-          const fromSupabase = supabaseEmployees.map(e => ({
-            id: e.id,
-            name: e.name,
-            role: e.role || 'Employee',
-            username: e.email?.split('@')[0] || e.name.toLowerCase(),
-            password: e.password || '1234'
-          }));
-          // Merge: Supabase entries win on username collision, but any hardcoded
-          // fallback employee (esp. 'manager') not present in Supabase is kept,
-          // so a partially-seeded Supabase table can never lock everyone out.
-          const supabaseUsernames = new Set(fromSupabase.map(e => e.username));
-          const keptFallback = employees.filter(e => !supabaseUsernames.has(e.username));
-          employees = [...fromSupabase, ...keptFallback];
-          console.log('✅ Loaded', fromSupabase.length, 'employees from Supabase, kept', keptFallback.length, 'fallback-only employees');
-        } else {
-          console.warn('⚠️ Supabase empty or unavailable, keeping hardcoded employees');
-        }
-      } catch (err) {
-        console.error('❌ Error loading from Supabase:', err);
-        console.log('Keeping hardcoded fallback employees');
-      }
-      
-      localStorage.setItem('teamtasks_employees', JSON.stringify(employees));
+      await loadEmployees();
 
       // Migration: runs ONCE ever (flagged), so it never reverts credentials you change later
       const alreadyMigrated = localStorage.getItem('teamtasks_creds_migrated');
@@ -1880,23 +1889,14 @@
       const password = document.getElementById('loginPassword').value;
       const errEl = document.getElementById('loginError');
 
-      // Debug: Log available employees
-      console.log('✅ Initialization complete. Employees loaded:', employees.length);
-      console.log('📋 Employees:', employees.map(e => ({name: e.name, username: e.username})));
-      console.log('🔐 Attempting login with:', {username, password});
-
       const emp = employees.find(e => {
         const empUsername = (e.username || '').toLowerCase().trim();
-        const match = empUsername === username && e.password === password;
-        console.log(`Checking ${empUsername} == ${username} && ${e.password} == ${password} => ${match}`);
-        return match;
+        return empUsername === username && e.password === password;
       });
 
       if (!emp) {
-        const availableIds = employees.map(e => e.username).join(', ');
-        errEl.textContent = `Invalid credentials. Available IDs: ${availableIds || 'None loaded'}`;
+        errEl.textContent = 'Invalid credentials.';
         errEl.classList.add('show');
-        console.error('Login failed. Available IDs:', availableIds);
         return;
       }
 
@@ -1942,58 +1942,36 @@
       return approvalTasks.filter(t => t.createdBy === currentUser.name);
     }
 
-    async function persist() {
-      localStorage.setItem('teamtasks_data', JSON.stringify(tasks));
-      
-      // Also save to Supabase
-      for (const task of tasks) {
-        if (task.status !== 'achievement') {
-          const { data: existing } = await supabase
-            .from('tasks')
-            .select('id')
-            .eq('id', task.id);
-          
-          if (existing && existing.length > 0) {
-            // Update existing task
-            const { error: updateError } = await supabase
-              .from('tasks')
-              .update({
-                title: task.name,
-                description: task.desc,
-                status: task.status,
-                assigned_to: task.assigned,
-                created_by: task.createdBy,
-                deadline: task.deadline,
-                urgency: task.urgency,
-                tags: task.tagged,
-                approval_status: task.approvalStatus || 'pending',
-                links: task.links || [],
-                updated_at: new Date().toISOString()
-              })
-              .eq('id', task.id);
-            if (updateError) console.error('❌ Supabase task update failed for', task.name, ':', updateError.message);
-          } else {
-            // Insert new task
-            const { error: insertError } = await supabase
-              .from('tasks')
-              .insert({
-                id: task.id,
-                title: task.name,
-                description: task.desc,
-                status: task.status,
-                assigned_to: task.assigned,
-                created_by: task.createdBy,
-                deadline: task.deadline,
-                urgency: task.urgency,
-                tags: task.tagged,
-                approval_status: task.approvalStatus || 'pending',
-                links: task.links || [],
-                code: task.code
-              });
-            if (insertError) console.error('❌ Supabase task insert failed for', task.name, ':', insertError.message);
-          }
-        }
-      }
+    // Syncs the given tasks to Supabase in a single request (defaults to the
+    // full board if no list is passed - only do that for bulk operations,
+    // since re-upserting every task on every small change is both slow and
+    // means a task deleted by someone else gets silently re-inserted by any
+    // other client that still has it in memory and later calls persist()).
+    async function persist(tasksToSync) {
+      const rows = (tasksToSync || tasks)
+        .filter(t => t.status !== 'achievement')
+        .map(t => ({
+          id: t.id,
+          code: t.code,
+          title: t.name,
+          description: t.desc,
+          status: t.status,
+          assigned_to: t.assigned,
+          created_by: t.createdBy,
+          deadline: t.deadline,
+          urgency: t.urgency,
+          tags: t.tagged,
+          approval_status: t.approvalStatus || 'pending',
+          links: t.links || [],
+          voice_notes: t.voiceNotes || [null, null],
+          attachments: t.attachments || [],
+          updated_at: new Date().toISOString()
+        }));
+
+      if (rows.length === 0) return;
+
+      const { error } = await supabase.from('tasks').upsert(rows);
+      if (error) console.error('❌ Supabase task upsert failed:', error.message);
     }
 
     function persistEmployees() {
@@ -2066,11 +2044,9 @@
         console.error('❌ Error deleting task from Supabase:', err);
       }
 
-      // Remove from main tasks array
+      // Remove from main tasks array (already deleted from Supabase above,
+      // so there's nothing left to persist here)
       tasks = tasks.filter(t => t.id !== task.id);
-
-      // Save changes
-      await persist();
       render();
     }
 
@@ -2105,7 +2081,7 @@
       tasks.push(restored);
 
       await removeAchievementRecord(ach);
-      await persist();
+      await persist([restored]);
       render();
     }
 
@@ -2293,18 +2269,7 @@
       }
 
       // Reload employees from Supabase, merged with fallback so 'manager' etc. can't be lost
-      const { data: reloaded } = await supabase.from('users').select('*');
-      const fromSupabase = (reloaded || []).map(e => ({
-        id: e.id,
-        name: e.name,
-        role: e.role || 'Employee',
-        username: e.email?.split('@')[0] || e.name.toLowerCase(),
-        password: e.password || '1234'
-      }));
-      const supabaseUsernames = new Set(fromSupabase.map(e => e.username));
-      const keptFallback = employees.filter(e => !supabaseUsernames.has(e.username));
-      employees = [...fromSupabase, ...keptFallback];
-      persistEmployees();
+      await loadEmployees();
 
       nameInput.value = '';
       roleSelect.value = 'Employee';
@@ -2314,7 +2279,7 @@
 
       renderEmployeeList();
       renderAssignOptions();
-      alert(`✅ Employee "${name}" added successfully!\nLogin ID: ${username}\nPassword: 1234`);
+      alert(`✅ Employee "${name}" added successfully!\nLogin ID: ${username}\nPassword: ${password}`);
     }
 
     function renderAssignOptions() {
@@ -2436,7 +2401,9 @@
       document.getElementById('photoInput').value = '';
     }
 
-    function saveEmployeeProfile() {
+    const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+    async function saveEmployeeProfile() {
       const emp = employees.find(e => e.id === editingEmployeeId);
       if (!emp) return;
 
@@ -2454,13 +2421,16 @@
       }
 
       const oldName = emp.name;
+      let renamedTasks = [];
       if (oldName !== newName) {
         tasks.forEach(t => {
-          if (t.assigned === oldName) t.assigned = newName;
-          if (t.tagged) t.tagged = t.tagged.map(n => n === oldName ? newName : n);
-          if (t.createdBy === oldName) t.createdBy = newName;
+          let touched = false;
+          if (t.assigned === oldName) { t.assigned = newName; touched = true; }
+          if (t.tagged && t.tagged.includes(oldName)) { t.tagged = t.tagged.map(n => n === oldName ? newName : n); touched = true; }
+          if (t.createdBy === oldName) { t.createdBy = newName; touched = true; }
+          if (touched) renamedTasks.push(t);
         });
-        persist();
+        if (renamedTasks.length) persist(renamedTasks);
       }
 
       const wasCurrentUser = currentUser && currentUser.id === emp.id;
@@ -2470,7 +2440,26 @@
       emp.photo = tempProfilePhoto;
       emp.username = newUsername;
       emp.password = newPassword;
-      persistEmployees();
+
+      // Save to Supabase - hardcoded fallback accounts (ids '1'-'4') have never
+      // had a real row, so the first edit creates one; everyone else updates in place.
+      const email = newUsername + '@teamtasks.com';
+      if (UUID_RE.test(emp.id)) {
+        const { error } = await supabase.from('users').update({
+          name: newName, role: newRole, email, password: newPassword, photo: emp.photo || null
+        }).eq('id', emp.id);
+        if (error) console.error('❌ Supabase employee update failed:', error.message);
+      } else {
+        const { data, error } = await supabase.from('users').insert({
+          name: newName, role: newRole, email, password: newPassword, photo: emp.photo || null
+        }).select();
+        if (error) {
+          console.error('❌ Supabase employee insert failed:', error.message);
+        } else if (data && data[0]) {
+          emp.id = data[0].id;
+          if (wasCurrentUser) editingEmployeeId = emp.id;
+        }
+      }
 
       if (wasCurrentUser) {
         currentUser = emp;
@@ -2717,7 +2706,7 @@
             // that column (see attachColumnDropHandlers above), so s.key can
             // never actually be 'approval' at this point.
             task.status = s.key;
-            persist();
+            persist([task]);
             render();
           }
         }
@@ -2960,16 +2949,18 @@
         data.approvalStatus = tempApproval || 'pending';
       }
 
+      let savedTask;
       if (editingId) {
-        const task = tasks.find(t => String(t.id) === String(editingId));
-        Object.assign(task, data);
+        savedTask = tasks.find(t => String(t.id) === String(editingId));
+        Object.assign(savedTask, data);
       } else {
         taskCounter++;
         const newId = (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : String(Date.now());
-        tasks.push({ id: newId, code: 'T-' + taskCounter, createdBy: currentUser ? currentUser.name : 'Manager Admin', ...data });
+        savedTask = { id: newId, code: 'T-' + taskCounter, createdBy: currentUser ? currentUser.name : 'Manager Admin', ...data };
+        tasks.push(savedTask);
       }
 
-      persist();
+      persist([savedTask]);
       render();
       closeModal();
     }
@@ -2979,13 +2970,12 @@
       if (!confirm('Delete this task?')) return;
       const deletedTask = tasks.find(t => String(t.id) === String(editingId));
       tasks = tasks.filter(t => String(t.id) !== String(editingId));
-      // Also remove it from Supabase so it doesn't reappear on next load
+      // Deleted directly from Supabase here, so there's nothing left to persist
       if (deletedTask) {
         supabase.from('tasks').delete().eq('id', deletedTask.id).then(({ error }) => {
           if (error) console.error('❌ Supabase task delete failed:', error.message);
         });
       }
-      persist();
       render();
       closeModal();
     }
@@ -3205,7 +3195,11 @@
     function esc(s) {
       const d = document.createElement('div');
       d.textContent = s || '';
-      return d.innerHTML;
+      // textContent->innerHTML escapes & < > but not quotes, and this value
+      // routinely lands inside double-quoted HTML attributes (value="...",
+      // onclick="fn('...')") - unescaped quotes there let stored task names,
+      // links, or employee names break out and inject markup/script.
+      return d.innerHTML.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
     }
 
     function getMultiSelect(id) {
@@ -3252,10 +3246,19 @@
       if (e.key === 'Enter') sendChatMessage();
     });
 
-    // Entry point: check for a remembered/active session (using the instantly-available
-    // hardcoded fallback employees), then showApp()/init() takes it from there and
-    // loads fresh data from Supabase in the background. If no session, show login.
-    checkSession();
+    // Entry point: load real employees first (so both a fresh login attempt and a
+    // remembered-session restore can find any account added via "Add Employee",
+    // not just the 4 hardcoded fallbacks), then decide whether to restore a
+    // session or show the login screen. Bounded by a timeout so a slow/unreachable
+    // Supabase still lets the hardcoded fallback accounts log in promptly instead
+    // of hanging the entry point indefinitely.
+    (async () => {
+      await Promise.race([
+        loadEmployees(),
+        new Promise(resolve => setTimeout(resolve, 3000))
+      ]);
+      checkSession();
+    })();
   </script>
 </body>
 </html>
