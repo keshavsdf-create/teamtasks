@@ -35,41 +35,78 @@ Inter font, teal/blue accents.
 - Project ref: `yptdkjryrpfmfouejmop`
 - Anon/publishable key (already embedded in `index.html`):
   `sb_publishable_ymPQMeSYZtv0_RzB843fYQ_kFRsa5cV`
-- Tables (all `uuid` primary keys via `gen_random_uuid()`):
-  - `users` — id, email, name, role, password, created_at
+- Tables (all `uuid` primary keys, `users.id`/`public` tables keyed 1:1 with
+  `auth.users.id` where relevant):
+  - `users` — id (= `auth.users.id`), email, name, role, photo, created_at.
+    **No password column** — Supabase Auth (`auth.users.encrypted_password`)
+    owns credentials now; nothing in the app reads/writes a password on this
+    table.
   - `tasks` — id, title, description, status, assigned_to, created_by,
-    deadline, urgency, tags (jsonb), approval_status, code, created_at, updated_at
+    deadline, urgency, tags (jsonb), approval_status, links (jsonb),
+    voice_notes (jsonb), attachments (jsonb), code, created_at, updated_at
   - `achievements` — id, task_id, user_id (holds the **assignee's name**, not
-    an FK), completed_at
-- RLS is **enabled** on all three tables with a permissive policy
-  (`FOR ALL USING (true) WITH CHECK (true)`) so the anon key can read/write.
-  This is intentionally wide-open — acceptable for an internal tool behind a
-  not-publicly-shared URL, but **not** safe if this app is ever exposed
-  more broadly. Tightening RLS is a natural next step if that changes.
-- IMPORTANT caveat: the assistant that set this up **does not have a
-  reliable way to independently verify live Supabase state** (table
-  contents, RLS status, advisors) from this chat environment — a Supabase
-  MCP connector exists but tool calls have failed with "No approval
-  received" every time they were tried. If something looks like a data
-  problem, check the Supabase dashboard directly (SQL Editor, Table Editor)
-  rather than assuming the assistant already confirmed it there.
+    an FK), title, description, urgency, completed_at
+  - `messages` — id, sender_name, sender_role, text, created_at (team chat)
+  - `app_settings` — single row (id=1), hidden_columns (jsonb) — which board
+    columns a manager has hidden for everyone
+- A Supabase MCP connector is available and has been reliably usable in
+  later sessions (the earlier "No approval received" issue mentioned in an
+  older version of this doc did not recur) — use it directly rather than
+  assuming it's unavailable.
 
-## Auth model (intentionally simple — no real auth provider)
+## Auth model — real Supabase Auth (migrated from a client-side-only scheme)
 
-- Login is ID + a plain password, checked client-side against the in-memory
-  `employees` array (which merges Supabase `users` rows with a hardcoded
-  fallback list). This is **not secure** in any real sense (passwords are
-  plaintext, checked client-side) — appropriate only because this is a small
-  trusted internal team, not a public product.
-- Hardcoded fallback accounts (always available even if Supabase is down):
-  `manager`/`1234`, `john`/`1234`, `sarah`/`1234`, `alex`/`1234`.
-- On load, `init()` merges Supabase-loaded employees with this fallback list
-  (Supabase entries win on username collision, but fallback-only entries are
-  never dropped) — this was a deliberate fix so the manager account can never
-  get locked out even if Supabase only has partial/odd data in it.
-- Login itself never blocks on Supabase: the fallback list is available
-  synchronously, and `init()` (which loads real data) only runs **after** a
-  successful login, inside `showApp()`.
+The app originally checked a plaintext password against a hardcoded/merged
+`employees` array entirely in the browser, with "session" being just a
+username string in `localStorage` and no server-side check at all — anyone
+could `localStorage.setItem('teamtasks_session','manager')` and become
+Manager. This was replaced with real authentication:
+
+- **Login** (`handleLoginSubmit`) calls `supabase.auth.signInWithPassword()`.
+  The "User ID" field the UI shows is not a raw username in Auth's eyes —
+  it's mapped to a real email as `username + '@teamtasks.com'` (e.g. `manager`
+  → `manager@teamtasks.com`), so the login form itself never had to change.
+- **Session** (`checkSession`) is restored via `supabase.auth.getSession()` —
+  a real signed JWT managed by supabase-js (persisted in its own
+  `localStorage` keys, auto-refreshed), not anything the app manages itself.
+  `handleLogout` calls `supabase.auth.signOut()`.
+- Every person who can log in — including the four people who used to be a
+  hardcoded fallback list (`manager`, `john`, `sarah`, `alex`, historically
+  password `1234` each) — is now a real row in `auth.users` with a bcrypt
+  password hash, created via direct SQL using `pgcrypto`'s
+  `crypt(password, gen_salt('bf'))` (see migration `migrate_existing_users_to_auth`
+  / `create_auth_for_fallback_accounts` in the project's migration history)
+  and a matching `public.users` profile row sharing the same `id`. There is
+  **no more hardcoded fallback `employees` array** in the client at all.
+- **Employee management** (create / edit profile / delete) can't be done
+  from the browser directly — creating or deleting a Supabase Auth user, or
+  changing someone else's password, needs the **service-role key**, which
+  must never reach client JS. Instead, `addEmployee()` / `saveEmployeeProfile()`
+  / `deleteEmployeeProfile()` call a Supabase **Edge Function**,
+  `manage-employee` (source in `supabase/functions/manage-employee/index.ts`,
+  also deployed to the project). It verifies the caller's JWT, confirms
+  they're a Manager (via `public.users.role`, looked up with the
+  service-role client so it isn't gated by the caller's own RLS), and only
+  then performs the privileged Auth-admin operation.
+- **RLS** requires a real authenticated session (`auth.uid() is not null`)
+  to read or write *anything* — the previous `USING (true)` / anyone-with-
+  the-anon-key policy is gone. A `public.is_manager()` `security definer`
+  helper (checks `public.users.role` for `auth.uid()`) additionally gates
+  the specific actions that were already manager-only in the UI —
+  deleting/restoring achievements, and updating `app_settings`
+  (hidden columns) — **at the database level too**, not just client-side.
+  `users` table: any authenticated user can `select` (needed for the team
+  list / assign dropdowns), but there is no client-writable policy on it at
+  all — writes only happen via the edge function's service-role client,
+  which bypasses RLS entirely.
+- What's still *not* covered by this: full per-row task visibility is still
+  a client-render concern (`visibleTasks()`/`visibleApprovalTasks()`), not
+  enforced by RLS — any authenticated user can read/write the `tasks` table
+  broadly. Also, people are still referenced by mutable display **name**
+  across tasks/achievements/chat (`assigned`, `createdBy`, `tagged`,
+  achievement `assignedTo`, chat `sender_name`), not by the now-available
+  stable `auth.uid()` — renaming someone can still silently disconnect their
+  history in those places. Both are known, deliberately out-of-scope follow-ups.
 
 ## Features implemented
 
@@ -119,12 +156,11 @@ worth knowing about before making further changes:
    `status` will still match the "not achievement" filter used on load,
    so the task can silently reappear after a refresh. This bit both the
    achievement-archive flow and manual task deletion at different points.
-3. **Any code that replaces `employees` wholesale from a Supabase query
-   result is dangerous** — if Supabase only has partial data (e.g. one
-   manually-added employee), a full replace can wipe out the manager
-   account and lock everyone out. Always merge (Supabase wins on username
-   collision, fallback entries not present in Supabase are kept) rather
-   than replace.
+3. (Historical — no longer applicable) `employees` used to be a merge of a
+   hardcoded fallback list and Supabase rows, and replacing it wholesale
+   could lock the manager out. There's no more fallback list — every account
+   is a real Supabase Auth user now, so `loadEmployees()` just does a plain
+   `select('*')` on `users`, which RLS already scopes to "must be logged in."
 4. **`init()` must only be called after login, never blocking the login
    screen itself** — it was originally called on page load, which meant a
    slow/unreachable Supabase would leave the login form stuck. It now runs
@@ -144,12 +180,17 @@ worth knowing about before making further changes:
 
 ## Suggested next steps (not yet done)
 
-- Verify live Supabase state (tables/RLS/advisors) directly, since the
-  assistant could not do this from chat — worth doing once via the Supabase
-  dashboard or a properly-authorized MCP session.
-- Consider whether RLS policies should be tightened before this app is
-  shared more widely than the current small team.
-- The single-file architecture (~2700 lines in one HTML file) works but is
+- Per-row task/message visibility enforced by RLS (currently client-render
+  only — any authenticated user can read/write the `tasks` and `messages`
+  tables broadly).
+- Move task/achievement/chat ownership from mutable display-name strings to
+  the now-available stable `auth.uid()`, so renaming someone doesn't
+  disconnect their history.
+- Supabase Auth's "leaked password protection" (checks against
+  HaveIBeenPwned) is currently off — worth turning on once everyone has
+  moved off placeholder passwords like `1234`, since turning it on earlier
+  would immediately reject logins using a known-breached password.
+- The single-file architecture (~3300 lines in one HTML file) works but is
   getting large; if further significant features are added, splitting into
   separate JS modules would make it easier to maintain — Claude Code is a
   good fit for that kind of refactor.
