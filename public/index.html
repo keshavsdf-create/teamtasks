@@ -632,20 +632,15 @@
 
     .board-section-row {
       display: flex;
-      gap: 18px;
-      overflow-x: auto;
-      align-items: flex-start;
-      padding-bottom: 12px;
+      flex-direction: column;
+      gap: 14px;
     }
 
     .column-with-add-bar {
       display: flex;
       flex-direction: column;
-      flex: 1 1 270px;
-      min-width: 270px;
-      transition: flex-basis 0.2s ease, min-width 0.2s ease;
+      width: 100%;
     }
-    .column-with-add-bar.wrap-collapsed { flex: 0 0 120px; min-width: 120px; }
     .column-with-add-bar .column { width: 100%; min-width: 0; flex: none; }
 
     .add-task-bar {
@@ -670,19 +665,16 @@
       background: var(--card-bg);
       border-radius: 18px;
       box-shadow: var(--shadow-sm);
-      min-width: 270px;
-      width: 270px;
-      flex: 1 1 270px;
+      width: 100%;
+      min-width: 0;
       padding: 18px;
-      transition: flex-basis 0.2s ease, min-width 0.2s ease, width 0.2s ease;
+      transition: padding 0.2s ease;
     }
 
     .column.column-collapsed {
-      flex: 0 0 120px;
-      min-width: 120px;
-      width: 120px;
-      padding: 14px 10px;
+      padding: 12px 18px;
     }
+    .column.column-collapsed .column-header { margin-bottom: 0; }
 
     .col-hide-btn {
       flex-shrink: 0;
@@ -697,18 +689,14 @@
     .col-hide-btn:hover { opacity: 1; background: #F1F5F9; }
 
     .column.column-hidden-placeholder {
-      flex: 0 0 190px;
-      min-width: 190px;
-      width: 190px;
-      padding: 14px;
+      width: 100%;
+      min-width: 0;
+      padding: 14px 18px;
       background: #F1F5F9;
       border: 1.5px dashed var(--border-soft);
       box-shadow: none;
     }
     .column-hidden-placeholder .column-header {
-      flex-direction: column;
-      align-items: flex-start;
-      gap: 8px;
       margin-bottom: 0;
     }
     .column-hidden-placeholder .column-header span { font-size: 13px; color: var(--label-gray); }
@@ -737,18 +725,6 @@
       font-size: 16px;
       font-weight: 700;
       color: var(--navy);
-    }
-
-    .column.column-collapsed .column-header {
-      flex-direction: row;
-      white-space: nowrap;
-      overflow: hidden;
-    }
-
-    .column.column-collapsed .column-header span:first-child {
-      font-size: 12px;
-      overflow: hidden;
-      text-overflow: ellipsis;
     }
 
     .column-count {
