@@ -2675,12 +2675,17 @@
     }
 
     function attachColumnDropHandlers(col, s) {
+      const isManager = currentUser && currentUser.role === 'Manager';
+
       col.addEventListener('dragover', e => {
         // Approval can only be entered by creating/editing a task with that status
         // directly - not by dragging an existing card in. Not calling
         // preventDefault() here tells the browser this isn't a valid drop target,
         // so 'drop' below never fires for this column.
         if (s.key === 'approval') return;
+        // Archiving is manager-only - employees can't drag their own (or anyone
+        // else's) tasks straight into Achievements.
+        if (s.key === 'achievement' && !isManager) return;
         e.preventDefault();
         col.classList.add('drag-over');
       });
@@ -2691,6 +2696,7 @@
         // Belt and suspenders: the dragover handler above already stops a real
         // browser drag from ever reaching here, but guard it directly too.
         if (s.key === 'approval') return;
+        if (s.key === 'achievement' && !isManager) return;
         const id = e.dataTransfer.getData('text/plain');
 
         if (id.startsWith('ach:')) {
