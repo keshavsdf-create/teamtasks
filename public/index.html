@@ -138,18 +138,6 @@
 
     .login-remember input { width: 16px; height: 16px; accent-color: var(--teal); cursor: pointer; }
 
-    .login-forgot {
-      color: var(--teal-dark);
-      font-weight: 700;
-      cursor: pointer;
-      background: none;
-      border: none;
-      font-size: 13px;
-      font-family: var(--sans);
-    }
-
-    .login-forgot:hover { text-decoration: underline; }
-
     .login-submit {
       width: 100%;
       background: var(--teal);
@@ -190,27 +178,6 @@
     }
 
     .login-hint-toggle:hover { text-decoration: underline; }
-
-    .login-hint {
-      display: none;
-      margin-top: 12px;
-      background: #F8FBFE;
-      border: 1px solid var(--border-soft);
-      border-radius: 10px;
-      padding: 10px 12px;
-    }
-
-    .login-hint.show { display: block; }
-
-    .login-hint-row {
-      display: flex;
-      justify-content: space-between;
-      font-size: 12px;
-      padding: 4px 0;
-      color: var(--navy);
-    }
-
-    .login-hint-row span:last-child { color: var(--label-gray); font-family: monospace; }
 
     /* ===== HEADER ===== */
     .header {
@@ -1241,11 +1208,9 @@
           <input type="checkbox" id="loginRemember">
           Remember me
         </label>
-        <button type="button" class="login-forgot" onclick="toggleLoginHint()">Forgot Password?</button>
       </div>
       <div id="loginError" class="login-error"></div>
       <button class="login-submit" onclick="handleLoginSubmit()">Sign In</button>
-      <div class="login-hint" id="loginHint"></div>
     </div>
     </div>
   </div>
@@ -1766,17 +1731,6 @@
       document.getElementById('loginRemember').checked = !!remembered;
       document.getElementById('loginPassword').value = '';
       document.getElementById('loginError').classList.remove('show');
-      document.getElementById('loginHint').classList.remove('show');
-    }
-
-    function toggleLoginHint() {
-      const hint = document.getElementById('loginHint');
-      if (!hint.classList.contains('show')) {
-        hint.innerHTML = employees.map(e => `
-          <div class="login-hint-row"><span>${esc(e.name)}</span><span>${esc(e.username)}</span></div>
-        `).join('') + '<div class="login-hint-row" style="border-top:1px solid var(--border-soft);margin-top:6px;padding-top:8px;"><span>Default password (unless changed)</span><span>1234</span></div>';
-      }
-      hint.classList.toggle('show');
     }
 
     function showApp() {
