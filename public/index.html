@@ -1514,8 +1514,18 @@
         .select('*')
         .neq('status', 'achievement');
       
-      if (!tasksError && supabaseTasks && supabaseTasks.length > 0) {
-        tasks = supabaseTasks.map(t => ({
+      if (tasksError) {
+        // A real fetch error (network blip, RLS misconfig, etc.) - keep
+        // whatever was already in memory rather than wiping the board or
+        // (worse) injecting demo data over a transient failure.
+        console.error('❌ Error loading tasks from Supabase:', tasksError.message);
+      } else {
+        // An empty result is a legitimate state - a team that's cleared
+        // their board, not "this must be a fresh install." Auto-seeding
+        // sample tasks here used to silently re-insert demo data every time
+        // someone deleted everything, which looked like deleted tasks
+        // "coming back" on refresh.
+        tasks = (supabaseTasks || []).map(t => ({
           id: t.id,
           code: t.code || `T-${Math.floor(Math.random() * 900) + 100}`,
           name: t.title,
@@ -1531,32 +1541,6 @@
           attachments: t.attachments || [],
           links: t.links || []
         }));
-      } else {
-        // Seed with sample data if database is empty
-        const sampleTasks = [
-          { id: 1, code: 'T-101', name: 'Design Dashboard UI', desc: 'Create modern mockups', assigned: 'John', tagged: ['Sarah'], deadline: '2026-08-28', urgency: 'high', status: 'in-progress', createdBy: 'Manager Admin', voiceNotes: [null, null], attachments: [] },
-          { id: 2, code: 'T-102', name: 'Setup Database', desc: 'Configure data storage', assigned: 'Alex', tagged: [], deadline: '2026-08-25', urgency: 'high', status: 'todo', createdBy: 'Manager Admin', voiceNotes: [null, null], attachments: [] },
-          { id: 3, code: 'T-103', name: 'Write Documentation', desc: 'User guide for the team', assigned: 'Sarah', tagged: [], deadline: '2026-09-05', urgency: 'low', status: 'future', createdBy: 'Manager Admin', voiceNotes: [null, null], attachments: [] },
-          { id: 4, code: 'T-104', name: 'Marketing Budget Approval', desc: 'Q4 campaign budget sign-off', assigned: 'John', tagged: [], deadline: '2026-08-24', urgency: 'medium', status: 'approval', approvalStatus: 'pending', createdBy: 'John', voiceNotes: [null, null], attachments: [] }
-        ];
-        
-        // Seed database with sample data
-        for (const task of sampleTasks) {
-          await supabase.from('tasks').insert({
-            title: task.name,
-            description: task.desc,
-            status: task.status,
-            assigned_to: task.assigned,
-            created_by: task.createdBy,
-            deadline: task.deadline,
-            urgency: task.urgency,
-            tags: task.tagged,
-            approval_status: task.approvalStatus || 'pending',
-            code: task.code
-          });
-        }
-        
-        tasks = sampleTasks;
       }
 
       await loadEmployees();
