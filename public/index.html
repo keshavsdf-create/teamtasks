@@ -619,6 +619,24 @@
     }
     .col-hide-btn:hover { opacity: 1; background: #F1F5F9; }
 
+    .col-add-btn {
+      flex-shrink: 0;
+      width: 22px; height: 22px;
+      border: none;
+      border-radius: 50%;
+      background: var(--teal);
+      color: white;
+      font-size: 15px;
+      font-weight: 700;
+      line-height: 1;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 2px 6px rgba(20,184,198,0.35);
+    }
+    .col-add-btn:hover { filter: brightness(1.08); }
+
     .column.column-hidden-placeholder {
       flex: 0 0 190px;
       min-width: 190px;
@@ -921,7 +939,22 @@
     .approval-badge.approved { background: #D4F3E1; color: #0F6B3C; }
     .approval-badge.rejected { background: #FBDADA; color: #A11616; }
 
-    .card-icons { display: flex; gap: 10px; margin-top: 6px; font-size: 11px; color: var(--label-gray); }
+    .card-icons { display: flex; gap: 10px; margin-top: 6px; font-size: 11px; color: var(--label-gray); align-items: center; }
+
+    .card-comment-icon.unread {
+      color: var(--red);
+      font-weight: 700;
+      position: relative;
+      padding-right: 8px;
+    }
+    .card-comment-icon.unread::after {
+      content: '';
+      position: absolute;
+      top: -1px; right: 0;
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--red);
+    }
 
     .card-creator {
       font-size: 10px;
@@ -995,6 +1028,20 @@
     }
 
     .chat-empty-hint { margin: auto; font-size: 13px; color: var(--label-gray); text-align: center; }
+
+    .task-comments-list {
+      max-height: 220px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      padding: 10px;
+      background: #F8FBFE;
+      border: 1px solid var(--border-soft);
+      border-radius: 12px;
+      margin-bottom: 10px;
+    }
+    .task-comments-list .chat-empty-hint { margin: 0; padding: 6px 0; }
 
     .chat-input-row { display: flex; gap: 8px; margin-top: 14px; }
     .chat-input {
@@ -1428,6 +1475,15 @@
         <div class="attach-list" id="attachList"></div>
       </div>
 
+      <div class="form-group" id="taskCommentsSection" style="display:none;">
+        <label>Task Chat</label>
+        <div class="task-comments-list" id="taskCommentsList"></div>
+        <div class="chat-input-row" style="margin-top:0;">
+          <input type="text" id="taskCommentInput" class="chat-input" placeholder="Message about this task...">
+          <button type="button" class="btn btn-primary" onclick="sendTaskComment()">Send</button>
+        </div>
+      </div>
+
       <div class="modal-actions">
         <button class="btn btn-delete" id="deleteBtn" style="display:none;" onclick="deleteTask()">Delete</button>
         <button class="btn btn-cancel" onclick="closeModal()">Cancel</button>
@@ -1707,11 +1763,13 @@
         renderAssignOptions();
         renderEmployeeList();
         render();
+        startTaskCommentMetaPolling();
       }).catch(err => {
         console.error('Error loading data after login:', err);
         renderAssignOptions();
         renderEmployeeList();
         render(); // Still render with what we have
+        startTaskCommentMetaPolling();
       });
     }
 
@@ -1837,6 +1895,140 @@
       await loadChatMessages();
     }
 
+    // ===== PER-TASK CHAT (a separate thread per task, not the team-wide room) =====
+    let taskCommentPollInterval = null;
+    let taskCommentsTaskId = null; // which task's thread is currently open in the modal
+    let taskCommentMeta = {};      // taskId -> { count, latest: ISO string } , for card badges
+    let taskCommentMetaPollInterval = null;
+
+    function taskCommentLastReadKey(taskId) {
+      return 'teamtasks_task_comment_last_read_' + (currentUser ? currentUser.username : '') + '_' + taskId;
+    }
+
+    function markTaskCommentsRead(taskId, latestTimestamp) {
+      if (!currentUser || !latestTimestamp) return;
+      localStorage.setItem(taskCommentLastReadKey(taskId), latestTimestamp);
+    }
+
+    function hasUnreadTaskComments(taskId) {
+      const meta = taskCommentMeta[taskId];
+      if (!meta || !meta.latest) return false;
+      const lastRead = localStorage.getItem(taskCommentLastReadKey(taskId));
+      return !lastRead || new Date(meta.latest) > new Date(lastRead);
+    }
+
+    async function loadTaskComments(taskId) {
+      const box = document.getElementById('taskCommentsList');
+      try {
+        const { data, error } = await supabase
+          .from('task_comments')
+          .select('*')
+          .eq('task_id', taskId)
+          .order('created_at', { ascending: true });
+
+        if (error) {
+          console.error('❌ Supabase task_comments select failed:', error.message);
+          box.innerHTML = '<div class="chat-empty-hint">Couldn\'t load messages.</div>';
+          return;
+        }
+
+        if (!data || data.length === 0) {
+          box.innerHTML = '<div class="chat-empty-hint">No messages yet on this task.</div>';
+        } else {
+          box.innerHTML = data.map(m => {
+            const mine = currentUser && m.sender_name === currentUser.name;
+            const time = new Date(m.created_at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+            return `
+              <div class="chat-msg ${mine ? 'mine' : ''}">
+                <div class="chat-msg-meta">${mine ? '' : esc(m.sender_name) + ' · '}${time}</div>
+                <div class="chat-msg-bubble">${esc(m.text)}</div>
+              </div>
+            `;
+          }).join('');
+          box.scrollTop = box.scrollHeight;
+          markTaskCommentsRead(taskId, data[data.length - 1].created_at);
+        }
+
+        taskCommentMeta[taskId] = {
+          count: data ? data.length : 0,
+          latest: data && data.length ? data[data.length - 1].created_at : null
+        };
+      } catch (err) {
+        console.error('❌ Error loading task comments:', err);
+        box.innerHTML = '<div class="chat-empty-hint">Couldn\'t load messages.</div>';
+      }
+    }
+
+    async function sendTaskComment() {
+      const input = document.getElementById('taskCommentInput');
+      const text = input.value.trim();
+      if (!text || !currentUser || !taskCommentsTaskId) return;
+
+      input.value = '';
+      input.disabled = true;
+      const { error } = await supabase.from('task_comments').insert({
+        task_id: taskCommentsTaskId,
+        sender_name: currentUser.name,
+        sender_role: currentUser.role,
+        text
+      });
+      input.disabled = false;
+      input.focus();
+
+      if (error) {
+        console.error('❌ Supabase task_comments insert failed:', error.message);
+        alert('Message failed to send. Please try again.');
+        input.value = text;
+        return;
+      }
+      await loadTaskComments(taskCommentsTaskId);
+    }
+
+    // Batched: one round trip for every visible task's comment count/latest
+    // timestamp, instead of a query per card.
+    async function loadTaskCommentMeta(taskIds) {
+      if (!taskIds || taskIds.length === 0) { taskCommentMeta = {}; return; }
+      try {
+        const { data, error } = await supabase
+          .from('task_comments')
+          .select('task_id, created_at')
+          .in('task_id', taskIds);
+
+        if (error) {
+          console.error('❌ Supabase task_comments meta fetch failed:', error.message);
+          return;
+        }
+
+        const meta = {};
+        (data || []).forEach(row => {
+          if (!meta[row.task_id]) meta[row.task_id] = { count: 0, latest: null };
+          meta[row.task_id].count++;
+          if (!meta[row.task_id].latest || row.created_at > meta[row.task_id].latest) {
+            meta[row.task_id].latest = row.created_at;
+          }
+        });
+        taskCommentMeta = meta;
+      } catch (err) {
+        console.error('❌ Error loading task comment meta:', err);
+      }
+    }
+
+    async function refreshTaskCommentMeta() {
+      await loadTaskCommentMeta(tasks.map(t => t.id));
+      render();
+    }
+
+    function startTaskCommentMetaPolling() {
+      refreshTaskCommentMeta();
+      stopTaskCommentMetaPolling();
+      taskCommentMetaPollInterval = setInterval(refreshTaskCommentMeta, 20000);
+    }
+
+    function stopTaskCommentMetaPolling() {
+      if (taskCommentMetaPollInterval) clearInterval(taskCommentMetaPollInterval);
+      taskCommentMetaPollInterval = null;
+    }
+
     async function handleLoginSubmit() {
       const username = document.getElementById('loginUsername').value.trim().toLowerCase();
       const password = document.getElementById('loginPassword').value;
@@ -1890,6 +2082,7 @@
       document.getElementById('teamDropdown').classList.remove('show');
       closeChatModal();
       stopChatUnreadPolling();
+      stopTaskCommentMetaPolling();
       await supabase.auth.signOut();
       showLogin();
     }
@@ -2575,6 +2768,13 @@
         ? `<button type="button" class="col-hide-btn" title="Hide this column for everyone" onclick="event.stopPropagation(); toggleColumnHidden('${key}', true)">🙈</button>`
         : '';
 
+      // Quick-add: skip the status dropdown for the two columns people jump
+      // straight into most often - starting a task, or sending one for approval.
+      const quickAddKeys = ['todo', 'approval'];
+      const quickAddBtnHtml = (key, label) => quickAddKeys.includes(key)
+        ? `<button type="button" class="col-add-btn" title="Add a task directly to ${esc(label)}" onclick="event.stopPropagation(); openAddModalForStatus('${key}')">+</button>`
+        : '';
+
       visibleStatuses.forEach(s => {
         const col = document.createElement('div');
 
@@ -2625,6 +2825,7 @@
             <span>${s.label}</span>
             <div style="display:flex;align-items:center;gap:6px;">
               <span class="column-count">${colTasks.length}</span>
+              ${quickAddBtnHtml(s.key, s.label)}
               ${hideBtnHtml(s.key)}
             </div>
           </div>
@@ -2715,8 +2916,13 @@
       const voiceCount = (task.voiceNotes || []).filter(Boolean).length;
       const fileCount = (task.attachments || []).length;
       const linkCount = (task.links || []).length;
-      const iconsHtml = (voiceCount || fileCount || linkCount)
-        ? `<div class="card-icons">${voiceCount ? `🎙️ ${voiceCount}` : ''} ${fileCount ? `📎 ${fileCount}` : ''} ${linkCount ? `🔗 ${linkCount}` : ''}</div>` : '';
+      const commentMeta = taskCommentMeta[task.id];
+      const commentCount = commentMeta ? commentMeta.count : 0;
+      const commentUnread = hasUnreadTaskComments(task.id);
+      const commentHtml = commentCount
+        ? `<span class="card-comment-icon${commentUnread ? ' unread' : ''}" title="${commentUnread ? 'New messages on this task' : ''}">💬 ${commentCount}</span>` : '';
+      const iconsHtml = (voiceCount || fileCount || linkCount || commentCount)
+        ? `<div class="card-icons">${voiceCount ? `🎙️ ${voiceCount}` : ''} ${fileCount ? `📎 ${fileCount}` : ''} ${linkCount ? `🔗 ${linkCount}` : ''} ${commentHtml}</div>` : '';
 
       const approvalBadge = task.status === 'approval'
         ? `<span class="approval-badge ${task.approvalStatus || 'pending'}">${task.approvalStatus || 'pending'}</span>` : '';
@@ -2849,7 +3055,21 @@
       renderAttachments();
       renderLinksInputs();
       onStatusChange();
+
+      // Nothing to comment on until the task exists - only shown when editing.
+      taskCommentsTaskId = null;
+      stopTaskCommentPolling();
+      document.getElementById('taskCommentsSection').style.display = 'none';
+
       document.getElementById('taskModal').classList.add('show');
+    }
+
+    // Same as openAddModal(), but pre-sets the status - used by the "+" button
+    // on a column header so creating a task there skips the status dropdown.
+    function openAddModalForStatus(status) {
+      openAddModal();
+      document.getElementById('fStatus').value = status;
+      onStatusChange();
     }
 
     function openEditModal(id) {
@@ -2892,11 +3112,25 @@
       renderAttachments();
       renderLinksInputs();
       onStatusChange();
+
+      taskCommentsTaskId = id;
+      document.getElementById('taskCommentsSection').style.display = 'block';
+      document.getElementById('taskCommentsList').innerHTML = '<div class="chat-empty-hint">Loading…</div>';
+      loadTaskComments(id);
+      stopTaskCommentPolling();
+      taskCommentPollInterval = setInterval(() => loadTaskComments(id), 4000);
+
       document.getElementById('taskModal').classList.add('show');
+    }
+
+    function stopTaskCommentPolling() {
+      if (taskCommentPollInterval) clearInterval(taskCommentPollInterval);
+      taskCommentPollInterval = null;
     }
 
     function closeModal() {
       stopRecordingIfActive();
+      stopTaskCommentPolling();
       document.getElementById('taskModal').classList.remove('show');
       editingId = null;
     }
@@ -3222,6 +3456,9 @@
     });
     document.getElementById('chatInput').addEventListener('keydown', e => {
       if (e.key === 'Enter') sendChatMessage();
+    });
+    document.getElementById('taskCommentInput').addEventListener('keydown', e => {
+      if (e.key === 'Enter') sendTaskComment();
     });
 
     // Entry point: real login no longer depends on the employees list being
