@@ -869,6 +869,7 @@
 
     /* ===== TASK CARDS ===== */
     .task-card {
+      position: relative;
       background: var(--card-bg);
       border-radius: 12px;
       border-left: 4px solid var(--slate);
@@ -876,6 +877,30 @@
       padding: 14px 16px;
       cursor: grab;
       transition: transform 0.15s ease, box-shadow 0.15s ease;
+    }
+
+    /* Unread task-chat notification: a red badge pinned to the card's
+       right-hand edge, separate from the neutral comment-count icon below -
+       this is the "something needs your attention" signal, meant to be
+       noticed at a glance while scanning the board. */
+    .card-notify-badge {
+      position: absolute;
+      top: -6px;
+      right: -6px;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: var(--red);
+      border: 2px solid var(--card-bg);
+      box-shadow: 0 2px 6px rgba(239,68,68,0.45);
+      animation: notify-pop 0.25s ease;
+    }
+    @keyframes notify-pop {
+      from { transform: scale(0.5); opacity: 0; }
+      to { transform: scale(1); opacity: 1; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .card-notify-badge { animation: none; }
     }
 
     .task-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
@@ -940,21 +965,6 @@
     .approval-badge.rejected { background: #FBDADA; color: #A11616; }
 
     .card-icons { display: flex; gap: 10px; margin-top: 6px; font-size: 11px; color: var(--label-gray); align-items: center; }
-
-    .card-comment-icon.unread {
-      color: var(--red);
-      font-weight: 700;
-      position: relative;
-      padding-right: 8px;
-    }
-    .card-comment-icon.unread::after {
-      content: '';
-      position: absolute;
-      top: -1px; right: 0;
-      width: 6px; height: 6px;
-      border-radius: 50%;
-      background: var(--red);
-    }
 
     .card-creator {
       font-size: 10px;
@@ -2920,14 +2930,19 @@
       const commentCount = commentMeta ? commentMeta.count : 0;
       const commentUnread = hasUnreadTaskComments(task.id);
       const commentHtml = commentCount
-        ? `<span class="card-comment-icon${commentUnread ? ' unread' : ''}" title="${commentUnread ? 'New messages on this task' : ''}">💬 ${commentCount}</span>` : '';
+        ? `<span class="card-comment-icon">💬 ${commentCount}</span>` : '';
       const iconsHtml = (voiceCount || fileCount || linkCount || commentCount)
         ? `<div class="card-icons">${voiceCount ? `🎙️ ${voiceCount}` : ''} ${fileCount ? `📎 ${fileCount}` : ''} ${linkCount ? `🔗 ${linkCount}` : ''} ${commentHtml}</div>` : '';
+      // Prominent, separate from the count above - the thing meant to catch
+      // your eye scanning the board, not just be noticed once you're reading a card.
+      const notifyBadgeHtml = commentUnread
+        ? `<span class="card-notify-badge" title="New message on this task"></span>` : '';
 
       const approvalBadge = task.status === 'approval'
         ? `<span class="approval-badge ${task.approvalStatus || 'pending'}">${task.approvalStatus || 'pending'}</span>` : '';
 
       card.innerHTML = `
+        ${notifyBadgeHtml}
         ${approvalBadge}
         <div class="card-title">${esc(task.name)}</div>
         <div class="card-code">${esc(task.code || '')}</div>
